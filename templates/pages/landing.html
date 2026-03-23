@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}{{ app_name }} – Welcome{% endblock %}
+
+{% block content %}
+<section class="hero is-medium is-primary">
+  <div class="hero-body">
+    <div class="container has-text-centered">
+      <p class="title is-2">{{ app_name }}</p>
+      <p class="subtitle is-4">A FastAPI web application template with Google&nbsp;OAuth, HTMX&nbsp;&amp;&nbsp;Bulma.</p>
+      <a class="button is-white is-large mt-4" href="/auth/google/login">
+        <strong>Login with Google</strong>
+      </a>
+    </div>
+  </div>
+</section>
+
+<section class="section">
+  <div class="container">
+    <div class="columns is-centered">
+      <div class="column is-8">
+        <div class="content has-text-centered">
+          <h2 class="title is-4">What's inside?</h2>
+          <div class="columns is-multiline">
+            <div class="column is-4">
+              <div class="box">
+                <span class="icon is-large has-text-primary"><i>🔒</i></span>
+                <p class="title is-6 mt-2">Secure by default</p>
+                <p class="is-size-7">CSP, SameSite cookies, CSRF protection, rate limiting.</p>
+              </div>
+            </div>
+            <div class="column is-4">
+              <div class="box">
+                <span class="icon is-large has-text-info"><i>⚡</i></span>
+                <p class="title is-6 mt-2">HTMX-powered</p>
+                <p class="is-size-7">Smooth partial updates without a SPA toolchain.</p>
+              </div>
+            </div>
+            <div class="column is-4">
+              <div class="box">
+                <span class="icon is-large has-text-success"><i>🐍</i></span>
+                <p class="title is-6 mt-2">Pure Python</p>
+                <p class="is-size-7">No Node.js build step. Jinja2&nbsp;+&nbsp;Bulma&nbsp;CSS.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

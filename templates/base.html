@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="htmx-config"
+        content='{"selfRequestsOnly":true,"allowScriptTags":false,"allowEval":false,"historyCacheSize":0}'>
+
+  <link rel="stylesheet" href="/vendor/css/bulma.min.css">
+  <link rel="stylesheet" href="/static/css/app.css">
+  <link rel="icon" href="/static/img/logo.svg" type="image/svg+xml">
+
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  {% block head_extra %}{% endblock %}
+</head>
+<body hx-headers='{"X-CSRF-Token": "{{ csrf_token | default("") }}"}'>
+
+  {# Skip-to-content link (accessibility) #}
+  <a href="#main-content" class="skip-link">Skip to main content</a>
+
+  {% include "partials/navbar.html" %}
+  {% include "partials/flash.html" %}
+
+  <main id="main-content" role="main">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% include "partials/footer.html" %}
+
+  <script src="/vendor/js/htmx.min.js"></script>
+  {% block scripts_extra %}{% endblock %}
+</body>
+</html>

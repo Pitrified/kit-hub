@@ -1,0 +1,61 @@
+# Render Blueprint
+# https://render.com/docs/blueprint-spec
+#
+# This file defines the infrastructure for deploying the webapp to Render.
+# Deploy using: https://render.com/deploy
+
+services:
+  - type: web
+    name: kit-hub-webapp
+    runtime: python
+    region: oregon  # or your preferred region
+
+    # Build configuration
+    buildCommand: pip install .
+    startCommand: uvicorn kit_hub.webapp.app:app --host 0.0.0.0 --port $PORT
+
+    # Health check
+    healthCheckPath: /health
+
+    # Environment variables
+    envVars:
+      # Required secrets (set in Render dashboard)
+      - key: GOOGLE_CLIENT_ID
+        sync: false  # Must be set manually in dashboard
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false  # Must be set manually in dashboard
+      - key: SESSION_SECRET_KEY
+        generateValue: true  # Render generates a random value
+
+      # Environment configuration
+      - key: ENV_STAGE_TYPE
+        value: prod
+      - key: ENV_LOCATION_TYPE
+        value: render
+
+      # Application settings
+      - key: WEBAPP_DEBUG
+        value: "false"
+      - key: WEBAPP_APP_NAME
+        value: "Kit Hub API"
+
+      # CORS - update with your frontend domain
+      - key: CORS_ALLOWED_ORIGINS
+        value: "https://your-frontend-domain.com"
+
+      # Google OAuth redirect - update with your Render URL
+      - key: GOOGLE_REDIRECT_URI
+        value: "https://kit-hub-webapp.onrender.com/auth/google/callback"
+
+    # Auto-deploy from main branch
+    autoDeploy: true
+
+    # Instance type (free tier available)
+    plan: free  # or starter, standard, etc.
+
+# Uncomment below for additional services like Redis for session storage
+# - type: redis
+#   name: kit-hub-redis
+#   region: oregon
+#   plan: free
+#   maxmemoryPolicy: allkeys-lru

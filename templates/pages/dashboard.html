@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard – {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+    <h1 class="title is-3">Dashboard</h1>
+    <p class="subtitle is-5">Welcome back, {{ user.name }}!</p>
+
+    <div class="columns dashboard-columns">
+
+      {# ── Left column: user card (loaded via HTMX partial) ─── #}
+      <div class="column is-4">
+        <div hx-get="/pages/partials/user-card"
+             hx-trigger="load"
+             hx-swap="innerHTML"
+             aria-busy="true">
+          <p class="has-text-centered">
+            <span class="htmx-indicator">Loading profile…</span>
+          </p>
+        </div>
+
+        {# Logout form #}
+        <form method="post" action="/auth/logout" class="mt-4">
+          <button class="button is-danger is-outlined is-fullwidth" type="submit">
+            Logout
+          </button>
+        </form>
+      </div>
+
+      {# ── Right column: quick links & health widget ────────── #}
+      <div class="column is-8">
+        <div class="box">
+          <h2 class="title is-5">Quick Links</h2>
+          <div class="buttons">
+            {% if debug %}
+            <a class="button is-link is-outlined" href="/docs" target="_blank" rel="noopener">
+              📖 API Docs (Swagger)
+            </a>
+            <a class="button is-link is-outlined" href="/redoc" target="_blank" rel="noopener">
+              📘 ReDoc
+            </a>
+            {% endif %}
+            <a class="button is-info is-outlined" href="/api/v1/" target="_blank" rel="noopener">
+              🔌 API v1
+            </a>
+            <a class="button is-info is-outlined" href="/health" target="_blank" rel="noopener">
+              💚 Health
+            </a>
+          </div>
+        </div>
+
+        {# HTMX demo: live health status #}
+        <div class="box">
+          <h2 class="title is-5">
+            System Health
+            <span class="htmx-indicator tag is-warning is-light ml-2">checking…</span>
+          </h2>
+          <div id="health-status"
+               hx-get="/health"
+               hx-trigger="load"
+               hx-swap="innerHTML"
+               aria-busy="true">
+            <progress class="progress is-small is-primary" max="100">Loading</progress>
+          </div>
+        </div>
+      </div>
+
+    </div>{# /columns #}
+  </div>
+</section>
+{% endblock %}

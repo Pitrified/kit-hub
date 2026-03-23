@@ -1,0 +1,78 @@
+<header>
+<nav class="navbar is-dark" role="navigation" aria-label="main navigation">
+  <div class="container">
+
+    {# ── Brand ──────────────────────────────────────────────── #}
+    <div class="navbar-brand">
+      <a class="navbar-item" href="/">
+        <img src="/static/img/logo.svg" alt="{{ app_name }} logo" width="28" height="28">
+        <strong class="ml-2">{{ app_name }}</strong>
+      </a>
+
+      {# Burger (mobile toggle) – CSS-only via :target is unreliable,
+         so we use a tiny inline onclick that Bulma documents. #}
+      <a role="button"
+         class="navbar-burger"
+         aria-label="menu"
+         aria-expanded="false"
+         data-target="navMenu"
+         onclick="this.classList.toggle('is-active');document.getElementById(this.dataset.target).classList.toggle('is-active')">
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+        <span aria-hidden="true"></span>
+      </a>
+    </div>
+
+    {# ── Menu ───────────────────────────────────────────────── #}
+    <div id="navMenu" class="navbar-menu">
+
+      {# Left side #}
+      <div class="navbar-start">
+        {% if user %}
+        <a class="navbar-item" href="/dashboard" {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
+          Dashboard
+        </a>
+        {% endif %}
+        {% if debug %}
+        <a class="navbar-item" href="/docs" target="_blank" rel="noopener">
+          API Docs
+        </a>
+        {% endif %}
+      </div>
+
+      {# Right side #}
+      <div class="navbar-end">
+        {% if user %}
+        <div class="navbar-item has-dropdown is-hoverable">
+          <a class="navbar-link">
+            {% if user.picture %}
+            <figure class="image is-24x24 mr-2">
+              <img class="is-rounded" src="{{ user.picture }}" alt="" referrerpolicy="no-referrer">
+            </figure>
+            {% endif %}
+            {{ user.name }}
+          </a>
+          <div class="navbar-dropdown is-right">
+            <span class="navbar-item">{{ user.email }}</span>
+            <hr class="navbar-divider">
+            <a class="navbar-item"
+               hx-post="/auth/logout"
+               hx-swap="none">
+              Logout
+            </a>
+          </div>
+        </div>
+        {% else %}
+        <div class="navbar-item">
+          <a class="button is-primary" href="/auth/google/login">
+            <strong>Login with Google</strong>
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
+    </div>{# /navbar-menu #}
+  </div>{# /container #}
+</nav>
+</header>

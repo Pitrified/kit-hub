@@ -1,0 +1,13 @@
+{# Flash messages — rendered from ``flash`` context variable.
+   ``flash`` is a dict with keys: type (success|danger|warning|info), message. #}
+{% if flash %}
+<section class="section py-2" aria-live="polite">
+  <div class="container">
+    <div class="notification is-{{ flash.type | default('info') }} is-light" role="alert">
+      <button class="delete" aria-label="dismiss"
+              onclick="this.parentElement.classList.add('is-dismissing');setTimeout(()=>this.parentElement.remove(),300)"></button>
+      {{ flash.message }}
+    </div>
+  </div>
+</section>
+{% endif %}

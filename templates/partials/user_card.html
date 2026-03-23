@@ -1,0 +1,19 @@
+{# User info card — designed as an HTMX-swappable partial.
+   Can be fetched via  hx-get="/pages/partials/user-card"  #}
+<div class="card" id="user-card">
+  <div class="card-content">
+    <div class="media">
+      {% if user.picture %}
+      <div class="media-left">
+        <figure class="image is-48x48">
+          <img class="is-rounded" src="{{ user.picture }}" alt="{{ user.name }} avatar" referrerpolicy="no-referrer">
+        </figure>
+      </div>
+      {% endif %}
+      <div class="media-content">
+        <p class="title is-5">{{ user.name }}</p>
+        <p class="subtitle is-6">{{ user.email }}</p>
+      </div>
+    </div>
+  </div>
+</div>
