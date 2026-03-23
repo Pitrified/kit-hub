@@ -6,19 +6,22 @@ readme = "README.md"
 requires-python = "==3.14.*"
 dependencies = [
     "dotenv>=0.9.9",
-    "llm-core>=0.1.0",
+    "llm-core[all] @ git+https://github.com/Pitrified/llm-core@v0.1.0",
     "loguru>=0.7.3",
-    "media-downloader>=0.1.0",
+    "media-downloader[instagram] @ git+https://github.com/Pitrified/media-downloader@v0.1.0",
 ]
 
 [project.optional-dependencies]
 webapp = [
-    "fastapi-tools>=0.1.0",
+    "fastapi-tools @ git+https://github.com/Pitrified/fastapi-tools@v0.1.0",
 ]
 
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/kit_hub"]
@@ -53,11 +56,6 @@ docs = [
     "mkdocs-material>=9.5",
     "mkdocs-api-autonav>=0.2",
 ]
-
-[tool.uv.sources]
-fastapi-tools = { path = "../fastapi-tools", editable = true }
-llm-core = { path = "../llm-core", editable = true }
-media-downloader = { path = "../media-downloader", editable = true }
 
 [tool.pyright]
 venvPath = "."
