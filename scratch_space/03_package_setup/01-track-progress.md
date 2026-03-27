@@ -24,7 +24,7 @@ Update this file as needed to reflect changes in the plan, and to track progress
 
 ## Current state
 
-Phase 1 - not started. Repository scaffolded from `python-project-template` with params, config, webapp, metaclasses.
+Phase 1 - in progress. Block 1 (recipe data model) complete.
 
 ---
 
@@ -33,19 +33,19 @@ Phase 1 - not started. Repository scaffolded from `python-project-template` with
 ### Block 1: Recipe data model + validation
 
 Sub-plan: [02-recipe-models.md](02-recipe-models.md)
-Status: **not started**
+Status: **complete**
 Phase: 1
 
 Core Pydantic models: `RecipeCore`, `Preparation`, `Ingredient`, `Step`, `RecipeNote`, `Note`, enums.
 No dependencies - this is the foundation.
 
-- [ ] Enums (`StepType`, `RecipeSource`, `MealCourse`)
-- [ ] Core models (`RecipeCore`, `Preparation`, `Ingredient`, `Step`)
-- [ ] Section index models (`SectionPreparation`, `SectionIngredient`, `SectionStep`)
-- [ ] Tag models (`Tag`, `RecipeTagAssignment`)
-- [ ] Voice note models (`Note`, `RecipeNote`)
-- [ ] Tests
-- [ ] Verification pass
+- [x] Enums (`StepType`, `RecipeSource`, `MealCourse`)
+- [x] Core models (`RecipeCore`, `Preparation`, `Ingredient`, `Step`)
+- [x] Section index models (`SectionPreparation`, `SectionIngredient`, `SectionStep`)
+- [x] Tag models (`Tag`, `RecipeTagAssignment`)
+- [x] Voice note models (`Note`, `RecipeNote`)
+- [x] Tests
+- [x] Verification pass
 
 ---
 
