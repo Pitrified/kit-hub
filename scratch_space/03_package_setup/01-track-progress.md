@@ -25,6 +25,7 @@ Update this file as needed to reflect changes in the plan, and to track progress
 ## Current state
 
 Phase 1 - complete. Blocks 1, 2, and 3 done.
+Phase 2 - in progress. Block 4 (Instagram ingestion) complete.
 
 ---
 
@@ -93,17 +94,18 @@ Depends on: Block 1
 ### Block 4: Instagram ingestion
 
 Sub-plan: [05-ingestion.md](05-ingestion.md)
-Status: **not started**
+Status: **complete**
 Phase: 2
 Depends on: Blocks 1, 2, 3
 
 Pipeline: IG URL -> `media-downloader` download -> transcribe -> LLM parse -> DB persist.
 
-- [ ] `IngestService` (orchestrator)
-- [ ] Factory function to wire components
-- [ ] `CacheManager` for IG post deduplication
-- [ ] Tests (mocked downloader + LLM)
-- [ ] Verification pass
+- [x] `IngestService` (orchestrator) with `ingest_ig_url` and `ingest_text`
+- [x] `EmptyMediaTextError` for missing caption/transcript
+- [x] `CacheManager` for IG post deduplication checks
+- [x] `build_ingest_service` factory function
+- [x] Tests (mocked `DownloadRouter` + `RecipeCoreTranscriber`, real in-memory DB)
+- [x] Verification pass
 
 ---
 

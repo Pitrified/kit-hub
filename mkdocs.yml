@@ -83,6 +83,7 @@ nav:
   - Library:
       - Database Layer: library/db_layer.md
       - LLM Chains: library/llm_chains.md
+      - Ingestion Layer: library/ingestion.md
   - API Reference: reference/
   - Contributing: contributing.md
 
