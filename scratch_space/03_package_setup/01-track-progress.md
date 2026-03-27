@@ -24,7 +24,7 @@ Update this file as needed to reflect changes in the plan, and to track progress
 
 ## Current state
 
-Phase 1 - in progress. Block 1 (recipe data model) complete.
+Phase 1 - in progress. Blocks 1 and 2 complete.
 
 ---
 
@@ -52,19 +52,19 @@ No dependencies - this is the foundation.
 ### Block 2: Database layer
 
 Sub-plan: [03-db-layer.md](03-db-layer.md)
-Status: **not started**
+Status: **complete**
 Phase: 1
 Depends on: Block 1
 
 SQLAlchemy ORM + Alembic + async CRUD service. SQLite with JSON column for `RecipeCore`.
 
-- [ ] `DbConfig` + `DbParams`
-- [ ] ORM models (`RecipeRow`, `TagRow`, `RecipeTagRow`, `AuthorRow`)
-- [ ] `DatabaseSession` async engine management
-- [ ] `RecipeCRUDService` (create, read, update, delete, list, reorder, add_tags)
-- [ ] Alembic init + initial migration
-- [ ] Tests (in-memory SQLite)
-- [ ] Verification pass
+- [x] `DbConfig` + `DbParams`
+- [x] ORM models (`RecipeRow`, `TagRow`, `RecipeTagRow`, `AuthorRow`)
+- [x] `DatabaseSession` async engine management
+- [x] `RecipeCRUDService` (create, read, update, delete, list, reorder, add_tags)
+- [x] Alembic init + initial migration
+- [x] Tests (in-memory SQLite)
+- [x] Verification pass
 
 ---
 

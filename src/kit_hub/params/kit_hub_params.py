@@ -11,6 +11,7 @@ is used to load different paths and other parameters based on the environment.
 from loguru import logger as lg
 
 from kit_hub.metaclasses.singleton import Singleton
+from kit_hub.params.db_params import DbParams
 from kit_hub.params.env_type import EnvType
 from kit_hub.params.kit_hub_paths import KitHubPaths
 from kit_hub.params.sample_params import SampleParams
@@ -43,6 +44,7 @@ class KitHubParams(metaclass=Singleton):
         """Load the kit_hub configuration."""
         self.paths = KitHubPaths(env_type=self.env_type)
         self.sample = SampleParams()
+        self.db = DbParams(env_type=self.env_type, data_fol=self.paths.data_fol)
         self.webapp = WebappParams(
             stage=self.env_type.stage,
             location=self.env_type.location,
@@ -53,6 +55,7 @@ class KitHubParams(metaclass=Singleton):
         s = "KitHubParams:"
         s += f"\n{self.paths}"
         s += f"\n{self.sample}"
+        s += f"\n{self.db}"
         s += f"\n{self.webapp}"
         return s
 

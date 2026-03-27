@@ -33,6 +33,18 @@ ignore = [
     "INP001", # Implicit namespace package
     "T20",    # print found
 ]
+"src/kit_hub/db/migrations/*" = [
+    "ANN",    # Type annotations not required in migration scripts
+    "D",      # Docstring conventions not enforced on auto-generated files
+    "INP001", # Alembic migrations are not Python packages
+    "I001",   # Import sorting managed by Alembic template
+    "Q",      # Quote style managed by Alembic template
+    "UP",     # Upgrade suggestions not required in auto-generated files
+    "E501",   # Line length not enforced on auto-generated files
+    "COM819", # Trailing comma style managed by Alembic template
+    "W291",   # Trailing whitespace in auto-generated files
+    "RUF100", # Unused noqa directives not checked in migration scripts
+]
 
 [lint.pylint]
 max-args = 10
