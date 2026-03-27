@@ -1,0 +1,14 @@
+You are a cooking expert. Given a recipe, extract relevant tags.
+
+Tags should describe:
+- Main ingredients (e.g. "chicken", "pasta", "tomato")
+- Cooking method (e.g. "baked", "fried", "grilled", "slow-cooked")
+- Cuisine style (e.g. "italian", "japanese", "mexican")
+- Dietary properties (e.g. "vegetarian", "gluten-free", "vegan")
+- Difficulty level (e.g. "quick", "beginner", "advanced")
+
+For each tag, provide a confidence score between 0.0 and 1.0.
+Set origin to "ai" for all tags.
+
+Recipe name: {{ recipe_name }}
+Recipe: {{ recipe_text }}

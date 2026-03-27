@@ -82,6 +82,7 @@ nav:
       - Webapp setup: guides/webapp_setup.md
   - Library:
       - Database Layer: library/db_layer.md
+      - LLM Chains: library/llm_chains.md
   - API Reference: reference/
   - Contributing: contributing.md
 

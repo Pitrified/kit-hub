@@ -40,6 +40,8 @@ class KitHubPaths:
         self.cache_fol = self.root_fol / "cache"
         # data
         self.data_fol = self.root_fol / "data"
+        # prompts (versioned Jinja templates for LLM chains)
+        self.prompts_fol = self.root_fol / "prompts"
         # static
         self.static_fol = self.root_fol / "static"
         # templates
@@ -58,6 +60,7 @@ class KitHubPaths:
         s += f"     root_fol: {self.root_fol}\n"
         s += f"    cache_fol: {self.cache_fol}\n"
         s += f"     data_fol: {self.data_fol}\n"
+        s += f"  prompts_fol: {self.prompts_fol}\n"
         s += f"   static_fol: {self.static_fol}\n"
         s += f"templates_fol: {self.templates_fol}\n"
         return s.rstrip()

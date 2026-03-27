@@ -24,7 +24,7 @@ Update this file as needed to reflect changes in the plan, and to track progress
 
 ## Current state
 
-Phase 1 - in progress. Blocks 1 and 2 complete.
+Phase 1 - complete. Blocks 1, 2, and 3 done.
 
 ---
 
@@ -71,20 +71,22 @@ SQLAlchemy ORM + Alembic + async CRUD service. SQLite with JSON column for `Reci
 ### Block 3: LLM chains
 
 Sub-plan: [04-llm-chains.md](04-llm-chains.md)
-Status: **not started**
+Status: **complete**
 Phase: 1
 Depends on: Block 1
 
 `StructuredLLMChain`-based pipelines with versioned Jinja prompts.
 
-- [ ] `LlmConfig` + `LlmParams`
-- [ ] `RecipeCoreTranscriber` (text -> RecipeCore)
-- [ ] `RecipeCoreEditor` (old recipe + correction -> updated RecipeCore)
-- [ ] `SectionIdxFinder` (NL location -> section index)
-- [ ] `TagExtractor` (recipe -> tags with confidence) - new
-- [ ] Versioned prompt templates (`v1.jinja` for each)
-- [ ] Tests (mocked LLM)
-- [ ] Verification pass
+- [x] `LlmConfig` + `LlmParams`
+- [x] Wire `LlmParams` into `KitHubParams`
+- [x] Add `prompts_fol` to `KitHubPaths`
+- [x] `RecipeCoreTranscriber` (text -> RecipeCore)
+- [x] `RecipeCoreEditor` (old recipe + correction -> updated RecipeCore)
+- [x] `SectionIdxFinder` (NL location -> section index)
+- [x] `TagExtractor` (recipe -> tags with confidence)
+- [x] Versioned prompt templates (`v1.jinja` for each in `prompts/`)
+- [x] Tests (mocked LLM via `FakeChatModelConfig`)
+- [x] Verification pass
 
 ---
 
