@@ -25,7 +25,7 @@ Update this file as needed to reflect changes in the plan, and to track progress
 ## Current state
 
 Phase 1 - complete. Blocks 1, 2, and 3 done.
-Phase 2 - in progress. Block 4 (Instagram ingestion) complete.
+Phase 2 - complete. Blocks 4 and 5 done.
 
 ---
 
@@ -112,16 +112,19 @@ Pipeline: IG URL -> `media-downloader` download -> transcribe -> LLM parse -> DB
 ### Block 5: Voice note session
 
 Sub-plan: [06-voice-notes.md](06-voice-notes.md)
-Status: **not started**
+Status: **complete**
 Phase: 2
 Depends on: Blocks 1, 3
 
 Live dictation: create session -> append audio -> Whisper transcribe -> freeze -> convert to recipe.
 
-- [ ] `VoiceSessionManager` (create, append, freeze, get, list)
-- [ ] `VoiceToRecipeConverter` (RecipeNote -> RecipeCore) - the missing bridge
-- [ ] Tests (mocked Whisper)
-- [ ] Verification pass
+- [x] `AudioTranscriber` Protocol (structural, in `voice_session.py`)
+- [x] `SessionNotFoundError` + `FrozenSessionError` custom exceptions
+- [x] `VoiceSessionManager` (create, append, freeze, get, list)
+- [x] `VoiceToRecipeConverter` (RecipeNote -> RecipeCore) - the missing bridge
+- [x] `notes_fol` added to `KitHubPaths`
+- [x] Tests (mocked Whisper, 29 tests total)
+- [x] Verification pass
 
 ---
 
