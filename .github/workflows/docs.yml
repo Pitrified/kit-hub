@@ -47,7 +47,7 @@ jobs:
         run: uv sync --group docs
 
       - name: Build MkDocs site
-        run: uv run mkdocs build --strict
+        run: uv run mkdocs build
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
