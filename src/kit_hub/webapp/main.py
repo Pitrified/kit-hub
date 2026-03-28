@@ -1,9 +1,12 @@
 """FastAPI application factory for kit_hub."""
 
-from pathlib import Path
+from collections.abc import AsyncGenerator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi_tools import create_app
+from fastapi_tools.auth.google import GoogleAuthService
+from fastapi_tools.auth.google import SessionStore
 from loguru import logger as lg
 
 from kit_hub.params.kit_hub_params import get_kit_hub_params
@@ -13,30 +16,12 @@ from kit_hub.webapp.api.v1.api_router import router as api_v1_router
 from kit_hub.webapp.routers.pages_router import router as pages_router
 
 
-class _StubAudioTranscriber:
-    """No-op audio transcriber used when Whisper is not configured.
-
-    Returns a placeholder message instead of a real transcript. Replace
-    this with a ``media-downloader`` Whisper transcriber in production.
-    """
-
-    async def atranscribe(self, audio_fp: Path) -> str:  # noqa: ARG002
-        """Return a fixed placeholder transcript.
-
-        Args:
-            audio_fp: Path to the audio file (ignored).
-
-        Returns:
-            Placeholder transcription string.
-        """
-        return "[Transcription service not configured]"
-
-
 def build_app() -> FastAPI:
     """Build the FastAPI application with services wired via lifespan.
 
-    Registers startup and shutdown callbacks that initialise the database,
-    build all service objects, and attach them to ``app.state``.
+    All services (database, LLM chains, voice session manager, ingest service)
+    are created inside the lifespan context manager and attached to
+    ``app.state`` before the first request is handled.
 
     Returns:
         Configured FastAPI application instance.
@@ -45,15 +30,20 @@ def build_app() -> FastAPI:
     config = params.to_config()
     paths = get_kit_hub_paths()
 
-    app = create_app(
-        config=config,
-        extra_routers=[pages_router, api_v1_router],
-        static_dir=paths.static_fol,
-        templates_dir=paths.templates_fol,
-    )
+    @asynccontextmanager
+    async def _lifespan(app: FastAPI) -> AsyncGenerator[None]:
+        # --- fastapi-tools default lifespan (SessionStore + GoogleAuthService) ---
+        session_store = SessionStore()
+        app.state.session_store = session_store
+        auth_service = GoogleAuthService(
+            oauth_config=config.google_oauth,
+            session_config=config.session,
+            session_store=session_store,
+        )
+        app.state.auth_service = auth_service
 
-    async def _startup() -> None:
-        from kit_hub.db.crud_service import RecipeCRUDService  # noqa: PLC0415
+        # --- kit-hub services ---
+        from kit_hub.db.crud_service import RecipeCRUDService  # noqa: I001, PLC0415
         from kit_hub.db.session import DatabaseSession  # noqa: PLC0415
         from kit_hub.ingestion.factory import build_ingest_service  # noqa: PLC0415
         from kit_hub.llm.editor import RecipeCoreEditor  # noqa: PLC0415
@@ -62,6 +52,7 @@ def build_app() -> FastAPI:
         from kit_hub.voice.voice_to_recipe import (  # noqa: PLC0415
             VoiceToRecipeConverter,
         )
+        from kit_hub.voice.whisper_adapter import WhisperAudioTranscriber  # noqa: PLC0415
 
         lg.info("Kit Hub webapp starting up")
         kit_hub = get_kit_hub_params()
@@ -79,9 +70,10 @@ def build_app() -> FastAPI:
         voice_converter = VoiceToRecipeConverter(
             transcriber=RecipeCoreTranscriber(llm_config),
         )
+        audio_transcriber = WhisperAudioTranscriber.from_default()
         voice_manager = VoiceSessionManager(
             notes_dir=kit_hub.paths.notes_fol,
-            transcriber=_StubAudioTranscriber(),
+            transcriber=audio_transcriber,
         )
 
         app.state.db = db
@@ -93,12 +85,18 @@ def build_app() -> FastAPI:
         app.state.voice_converter = voice_converter
         lg.info("All services initialised and attached to app.state")
 
-    async def _shutdown() -> None:
-        if hasattr(app.state, "db"):
-            await app.state.db.close()
-            lg.info("Database connection closed")
+        yield
 
-    app.router.on_startup.append(_startup)
-    app.router.on_shutdown.append(_shutdown)
+        # --- shutdown ---
+        await db.close()
+        lg.info("Database connection closed")
+
+    app = create_app(
+        config=config,
+        extra_routers=[pages_router, api_v1_router],
+        static_dir=paths.static_fol,
+        templates_dir=paths.templates_fol,
+        lifespan=_lifespan,
+    )
 
     return app

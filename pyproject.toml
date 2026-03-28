@@ -8,7 +8,7 @@ dependencies = [
     "aiosqlite>=0.20.0",
     "alembic>=1.14.0",
     "dotenv>=0.9.9",
-    "llm-core[all] @ git+https://github.com/Pitrified/llm-core@v0.1.0",
+    "llm-core[all] @ git+https://github.com/Pitrified/llm-core@v0.2.0",
     "loguru>=0.7.3",
     "media-downloader[instagram] @ git+https://github.com/Pitrified/media-downloader@v0.1.1",
     "sqlalchemy>=2.0.0",

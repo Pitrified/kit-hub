@@ -58,6 +58,7 @@ plugins:
       modules:
         - src/kit_hub
       exclude_private: false
+      on_implicit_namespace_package: skip
 
 markdown_extensions:
   - pymdownx.highlight:
