@@ -340,3 +340,60 @@ async def voice_notes(
             "active_page": "voice",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# HTMX partials
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/pages/partials/add-recipe-form",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def add_recipe_form_partial(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+) -> HTMLResponse:
+    """Return the paste-text recipe form HTML fragment for HTMX swap.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+
+    Returns:
+        Add-recipe form partial HTML (no base layout).
+    """
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "partials/add_recipe_form.html",
+        {"user": user},
+    )
+
+
+@router.get(
+    "/pages/partials/ingest-recipe-form",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def ingest_recipe_form_partial(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+) -> HTMLResponse:
+    """Return the Instagram ingest form HTML fragment for HTMX swap.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+
+    Returns:
+        Ingest-recipe form partial HTML (no base layout).
+    """
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "partials/ingest_recipe_form.html",
+        {"user": user},
+    )

@@ -1,0 +1,24 @@
+{# Instagram ingest form — fetched via hx-get="/pages/partials/ingest-recipe-form" #}
+<form hx-post="/api/v1/recipes/ingest"
+      hx-ext="json-enc"
+      hx-target="#add-recipe-body"
+      hx-swap="innerHTML"
+      hx-indicator="#ingest-spinner">
+  <div class="field has-addons">
+    <div class="control is-expanded">
+      <input class="input"
+             type="url"
+             name="url"
+             placeholder="https://www.instagram.com/p/..."
+             required
+             autocomplete="off">
+    </div>
+    <div class="control">
+      <button class="button is-info" type="submit">
+        <span id="ingest-spinner" class="htmx-indicator icon">⏳</span>
+        <span>Import</span>
+      </button>
+    </div>
+  </div>
+  <p class="help">Paste a public Instagram post URL and we'll extract the recipe automatically.</p>
+</form>

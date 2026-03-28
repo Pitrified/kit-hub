@@ -4,6 +4,9 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi import Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi_tools import create_app
 from fastapi_tools.auth.google import GoogleAuthService
 from fastapi_tools.auth.google import SessionStore
@@ -98,5 +101,19 @@ def build_app() -> FastAPI:
         templates_dir=paths.templates_fol,
         lifespan=_lifespan,
     )
+
+    @app.exception_handler(RequestValidationError)
+    async def _validation_error_handler(
+        request: Request,
+        exc: RequestValidationError,
+    ) -> JSONResponse:
+        """Log validation error details and return 422."""
+        lg.warning(
+            "Request validation error"
+            f" | {request.method} {request.url.path}"
+            f" | content-type: {request.headers.get('content-type', '<not set>')}"
+            f" | errors: {exc.errors()}"
+        )
+        return JSONResponse(status_code=422, content={"detail": exc.errors()})
 
     return app

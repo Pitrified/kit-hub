@@ -1,0 +1,25 @@
+{# Paste-text recipe form — fetched via hx-get="/pages/partials/add-recipe-form" #}
+<form hx-post="/api/v1/recipes/"
+      hx-ext="json-enc"
+      hx-target="#add-recipe-body"
+      hx-swap="innerHTML"
+      hx-indicator="#add-recipe-spinner">
+  <div class="field">
+    <div class="control">
+      <textarea class="textarea"
+                name="text"
+                rows="6"
+                placeholder="Paste or type your recipe here…"
+                required></textarea>
+    </div>
+  </div>
+  <div class="field">
+    <div class="control">
+      <button class="button is-primary" type="submit">
+        <span id="add-recipe-spinner" class="htmx-indicator icon">⏳</span>
+        <span>Parse Recipe</span>
+      </button>
+    </div>
+  </div>
+  <p class="help">The LLM will parse any free-form recipe text into a structured format.</p>
+</form>
