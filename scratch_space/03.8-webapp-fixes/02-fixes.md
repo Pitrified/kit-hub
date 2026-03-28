@@ -36,20 +36,19 @@ The likely sources are:
 
 Low. This is a cosmetic warning during development (`--reload`). Does not occur in production (single-process uvicorn without reloader).
 
+### Resolution
+
+Confirmed: running `uvicorn kit_hub.webapp.app:app` without `--reload` produces no warnings. This is a uvicorn reloader artifact - the reloader spawns a child process using `multiprocessing.spawn` and the resource tracker in CPython 3.14 reports the inter-process semaphore as leaked when the parent tears down. Kit-hub's own code is clean.
+
 ### Plan
 
-1. **Verify it doesn't happen in production mode**: run `uvicorn kit_hub.webapp.app:app` (no `--reload`) and confirm no leak warnings.
-2. **If it persists in production**, ensure `await db.close()` calls `await engine.dispose()` explicitly before the lifespan yields back, and add a brief `await asyncio.sleep(0.1)` to let pending pool tasks settle.
-3. **If it's reload-only**, suppress with a `warnings.filterwarnings("ignore", message="resource_tracker")` in the uvicorn dev entry point only, or simply document as expected.
-4. **Track upstream**: check if CPython 3.14.3+ or uvicorn has a fix for this; it's a known issue in the ecosystem.
+No code changes required. Accept the warning as a known development artifact.
+
+Optional low-priority improvement: add a `warnings.filterwarnings` call in `src/kit_hub/webapp/app.py` (guarded to dev mode only) to suppress the noise when stopping the reloader, but this is purely cosmetic and not urgent.
 
 ### Files to touch
 
-- Possibly `src/kit_hub/webapp/app.py` (warnings filter for dev only)
-- Possibly `src/kit_hub/db/session.py` (explicit dispose + sleep)
-
-RESULT: with no `--reload`, the warning does not appear. This is a uvicorn dev mode artifact. Document and ignore for now.
-Maybe add a filter so that we don't see the warning every time we stop the server during development, but it's not a high priority fix.
+- None required. Optionally `src/kit_hub/webapp/app.py` for a warnings filter (low priority).
 
 ---
 
@@ -85,27 +84,18 @@ The same issue applies to `templates/partials/ingest_recipe_form.html` which tar
 
 ### Plan
 
-Two options (choose one):
+Use `HX-Redirect` to send the browser to the full recipe detail page after creation. The user lands on `/recipes/{new_id}` immediately and can edit or start cooking.
 
-**Option A - Create a success partial (recommended)**:
-1. Create a new Jinja2 partial template `templates/partials/recipe_created.html` that renders a success card with the recipe name and a "View recipe" link.
-2. Create new page-router endpoints (e.g. `POST /pages/recipes/add-text` and `POST /pages/recipes/ingest`) that call the service layer directly, then render the partial.
-3. Update `add_recipe_form.html` to `hx-post="/pages/recipes/add-text"` and `ingest_recipe_form.html` to `hx-post="/pages/recipes/ingest"`.
-4. The API endpoints stay as-is (JSON) for programmatic clients.
-
-**Option B - Redirect after creation**:
-1. Add `HX-Redirect` header in the API response when the request comes from HTMX (check `HX-Request` header).
-2. Redirect to `/recipes/{new_id}` so the user sees the full detail page.
-3. Simpler but less smooth UX (full page navigation instead of partial swap).
+1. In `recipe_router.py`, detect the `HX-Request` header on the `POST /api/v1/recipes/` and `POST /api/v1/recipes/ingest` endpoints.
+2. When the request comes from HTMX, return a `Response` with status `204` (or `200`) and the `HX-Redirect: /recipes/{new_id}` header instead of the JSON body.
+3. When the request is a plain API call (no `HX-Request` header), continue returning the full `RecipeDetailResponse` JSON as before.
+4. No new templates or page-router endpoints needed.
 
 ### Files to touch
 
-- `templates/partials/recipe_created.html` (new - success partial)
-- `src/kit_hub/webapp/routers/pages_router.py` (new POST endpoints for HTMX)
-- `templates/partials/add_recipe_form.html` (update hx-post target)
-- `templates/partials/ingest_recipe_form.html` (update hx-post target)
-
-DECISION: option B, user will probably want to see the full recipe detail after adding, to edit it if something went wrong or cook it immediately
+- `src/kit_hub/webapp/api/v1/recipe_router.py` (add HX-Redirect branch on create + ingest)
+- `templates/partials/add_recipe_form.html` (no change needed - existing hx-post targets are fine)
+- `templates/partials/ingest_recipe_form.html` (no change needed)
 
 ---
 
@@ -167,6 +157,10 @@ Since navbar is on every page, add `<script src="/static/js/navbar.js"></script>
 **Consideration - CSRF token passing**:
 `voice.js` currently reads a CSRF meta tag via `document.querySelector('meta[name="csrf-token"]')`. Since the meta tag is in the HTML (not inline JS), this works fine from an external file.
 
+### Notes on e6 overlap
+
+The three new JS files (`voice.js`, `cook.js`, `navbar.js`) go into `static/js/` alongside the existing `htmx-ext-json-enc.min.js`. This is the right location - no conflict with e6. The stale files being deleted in e6 (`bulma.min.css`, `htmx.min.js`, the swagger directory) are in different subdirectories and are not touched by this fix.
+
 ### Files to touch
 
 - `static/js/voice.js` (new)
@@ -204,26 +198,37 @@ Only these kit-hub-specific assets in `static/` are used:
 - `static/js/htmx-ext-json-enc.min.js` (loaded in `base.html`)
 - `static/img/logo.svg` (referenced in navbar)
 
+### Confirmed: the `/vendor/` mount is fully self-contained
+
+Investigation of the fastapi-tools repo confirms:
+
+- The vendor assets live at `src/fastapi_tools/_static/` inside the package source.
+- Hatchling automatically includes all non-Python files within the `packages = ["src/fastapi_tools"]` directory when building the wheel - no `MANIFEST.in` or extra config needed.
+- `factory.py` resolves the path at import time: `_VENDOR_STATIC = Path(__file__).parent / "_static"` and mounts it at `/vendor/`.
+- kit-hub pulls fastapi-tools as a git dependency (`git+https://github.com/Pitrified/fastapi-tools@v0.1.0`); the `_static/` directory is present in the installed package and `/vendor/` just works.
+
+It is therefore safe to delete the stale duplicates from kit-hub's `static/` directory.
+
 ### Plan
 
-1. **Delete stale files** from `kit-hub/static/`:
-   - `static/css/bulma.min.css`
-   - `static/js/htmx.min.js`
+1. Delete stale files from `kit-hub/static/`:
+   - `static/css/bulma.min.css` (replaced by `/vendor/css/bulma.min.css`)
+   - `static/js/htmx.min.js` (replaced by `/vendor/js/htmx.min.js`)
    - `static/swagger/redoc.standalone.js`
    - `static/swagger/swagger-ui-bundle.js`
    - `static/swagger/swagger-ui.css`
-   - `static/swagger/` directory itself
-2. **Verify no templates reference** `/static/css/bulma.min.css`, `/static/js/htmx.min.js`, or `/static/swagger/*`. They should all use `/vendor/` paths.
-3. **Update `scripts/webapp/cdn_load.sh`** to document clearly that vendor assets come from fastapi-tools.
-4. **Update `.gitignore`** if needed - the stale files might be tracked.
+   - `static/swagger/` directory
+2. Verify no template references `/static/css/bulma.min.css`, `/static/js/htmx.min.js`, or `/static/swagger/*` - they should all use `/vendor/` paths.
+3. Update `scripts/webapp/cdn_load.sh` to clarify that vendor assets come from fastapi-tools and no download is needed.
+4. Check `.gitignore` - if the stale files were tracked in git, they need to be untracked.
 
 ### Files to touch
 
 - Delete `static/css/bulma.min.css`
 - Delete `static/js/htmx.min.js`
 - Delete `static/swagger/` (entire directory)
-- Possibly update `scripts/webapp/cdn_load.sh`
-- Possibly update `.gitignore`
+- `scripts/webapp/cdn_load.sh` (update comment/docs)
+- Possibly `.gitignore` (untrack deleted files if they are currently tracked)
 
 ---
 
@@ -245,19 +250,11 @@ None. This is purely cosmetic log noise during development.
 
 ### Plan
 
-Two options:
-
-**Option A - Ignore (recommended)**:
-Do nothing. This is a Chrome feature probe and the 404 is correct behavior. It has zero user impact.
-
-**Option B - Suppress log noise**:
-If the 404s are annoying in the dev logs, add a lightweight handler in fastapi-tools or kit-hub that returns an empty 204 or JSON `{}` for `/.well-known/appspecific/com.chrome.devtools.json`. This is purely cosmetic.
+No action. This is a Chrome feature probe; the 404 is correct and expected behaviour. Zero user impact.
 
 ### Files to touch
 
-None (Option A). Or a small route in `pages_router.py` (Option B).
-
-DECISION: Option A, ignore
+None.
 
 ---
 
@@ -305,17 +302,15 @@ There is no `edit-recipe-form` partial endpoint and no corresponding template.
    - Fetches the recipe from DB via `RecipeCRUDService`
    - Renders `partials/edit_recipe_form.html` with the recipe data
 
-3. **Decide on edit scope**: The button currently sits at the recipe level (one button in the header area). Consider whether it should be per-step (next to each step) or per-recipe (one form for the whole recipe). The existing API endpoint `POST /api/v1/recipes/{recipe_id}/edit` accepts a `step_reference` + `correction`, so a per-recipe form with a step selector makes sense.
-   - Analyze UX implications, what happens when there are multiple preparations and steps?
-   A single `edit recipe` button that then allows selecting which preparation+step to edit, so we keep the main recipe page clean, and the edit form can be reused for any step.
+3. **Edit scope UX**: keep the main recipe page clean with a single "Edit recipe" button (already in the header). When clicked, the edit form loads into `#edit-panel` and presents:
+   - A grouped dropdown (or `<optgroup>` select) listing all preparations and their steps, so the user can pick exactly which step to edit even when there are multiple preparations.
+   - A free-text textarea for the natural-language correction instruction.
+   This avoids cluttering each step row with an inline edit button and makes the partial reusable for any step across any preparation.
 
-4. **Handle the edit response**: The API's `POST /api/v1/recipes/{recipe_id}/edit` returns JSON (`RecipeDetailResponse`). Similar to e4, the HTMX form should either:
-   - Target a pages endpoint that returns HTML, or
-   - Use `HX-Redirect` to refresh the recipe detail page after edit. -> this, redirect to the recipe detail page to see the updated content.
+4. **Edit response**: the HTMX form should `POST` to a new pages-layer endpoint (e.g. `POST /pages/recipes/{recipe_id}/edit`) rather than directly to the API. That endpoint calls `RecipeCRUDService` / the LLM editor, then returns a `Response` with `HX-Redirect: /recipes/{recipe_id}` so the browser navigates to the refreshed recipe detail page. The underlying API endpoint (`POST /api/v1/recipes/{recipe_id}/edit`) stays as-is for programmatic clients.
 
 ### Files to touch
 
-- `templates/partials/edit_recipe_form.html` (new)
-- `src/kit_hub/webapp/routers/pages_router.py` (new GET endpoint)
-- Possibly `src/kit_hub/webapp/routers/pages_router.py` (new POST endpoint for HTMX edit, similar to e4 plan)
-- `templates/pages/recipe_detail.html` (may need adjustments to edit button placement)
+- `templates/partials/edit_recipe_form.html` (new - step selector + correction textarea)
+- `src/kit_hub/webapp/routers/pages_router.py` (new GET endpoint for the partial + new POST endpoint that calls the editor and returns HX-Redirect)
+- `templates/pages/recipe_detail.html` (verify edit button placement; no structural changes expected)
