@@ -10,6 +10,7 @@ from fastapi import Depends
 from fastapi import HTTPException
 from fastapi import Query
 from fastapi import Request
+from fastapi import Response
 from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
@@ -19,9 +20,12 @@ from fastapi_tools.schemas.auth import SessionData
 
 from kit_hub.db.crud_service import RecipeCRUDService
 from kit_hub.db.session import DatabaseSession
+from kit_hub.llm.editor import RecipeCoreEditor
 from kit_hub.recipes.recipe_core import RecipeCore
+from kit_hub.webapp.api.schemas import RecipeEditRequest
 from kit_hub.webapp.core.dependencies import get_crud
 from kit_hub.webapp.core.dependencies import get_db
+from kit_hub.webapp.core.dependencies import get_editor
 
 # Map OAuth error codes to user-friendly messages
 _ERROR_MESSAGES: dict[str, str] = {
@@ -396,4 +400,109 @@ async def ingest_recipe_form_partial(
         request,
         "partials/ingest_recipe_form.html",
         {"user": user},
+    )
+
+
+@router.get(
+    "/pages/partials/edit-recipe-form/{recipe_id}",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def edit_recipe_form_partial(
+    request: Request,
+    recipe_id: str,
+    user: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+) -> HTMLResponse:
+    """Return the edit-step form HTML fragment for HTMX swap.
+
+    Args:
+        request: Incoming request.
+        recipe_id: UUID string of the recipe to edit.
+        user: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+
+    Returns:
+        Edit-recipe form partial HTML (no base layout).
+
+    Raises:
+        HTTPException: 404 when the recipe does not exist.
+    """
+    async with db.get_session() as dbsession:
+        row = await crud.get_recipe(dbsession, recipe_id=recipe_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found.",
+        )
+    recipe_core = RecipeCore.model_validate_json(row.recipe_json)
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "partials/edit_recipe_form.html",
+        {"user": user, "row": row, "recipe": recipe_core},
+    )
+
+
+@router.post(
+    "/pages/recipes/{recipe_id}/edit",
+    response_model=None,
+    include_in_schema=False,
+)
+async def edit_recipe_page(
+    recipe_id: str,
+    body: RecipeEditRequest,
+    _session: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+    editor: Annotated[RecipeCoreEditor, Depends(get_editor)],
+) -> Response:
+    """Apply an LLM-powered step correction and redirect to the detail page.
+
+    Args:
+        recipe_id: UUID string of the recipe to edit.
+        body: Old step text and natural-language correction instructions.
+        _session: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+        editor: LLM editor chain.
+
+    Returns:
+        HX-Redirect response to the refreshed recipe detail page.
+
+    Raises:
+        HTTPException: 404 when the recipe does not exist.
+    """
+    async with db.get_session() as dbsession:
+        row = await crud.get_recipe(dbsession, recipe_id=recipe_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found.",
+        )
+    old_recipe = RecipeCore.model_validate_json(row.recipe_json)
+    updated = await editor.ainvoke(
+        old_recipe=old_recipe,
+        old_step=body.old_step,
+        new_step=body.new_step,
+    )
+    try:
+        async with db.get_session() as dbsession:
+            await crud.update_recipe(
+                dbsession,
+                recipe_id=recipe_id,
+                recipe=updated,
+            )
+    except KeyError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found.",
+        ) from exc
+
+    return Response(
+        status_code=200,
+        headers={"HX-Redirect": f"/recipes/{recipe_id}"},
     )

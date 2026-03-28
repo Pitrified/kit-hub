@@ -1,0 +1,64 @@
+/* Custom styles & HTMX indicator overrides for the webapp.
+ *
+ * This file layers on top of Bulma 1.0.x.
+ * Keep it minimal — prefer Bulma classes in templates.
+ */
+
+/* ── Skip-nav link ─────────────────────────────────────────── */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  background: hsl(171, 100%, 41%); /* Bulma primary */
+  color: #fff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+/* ── HTMX loading indicator ───────────────────────────────── */
+.htmx-indicator {
+  display: inline-block;
+  opacity: 0;
+  transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator,
+.htmx-request.htmx-indicator {
+  opacity: 1;
+}
+
+/* ── HTMX swap transition (fade) ──────────────────────────── */
+.htmx-swapping {
+  opacity: 0;
+  transition: opacity 100ms ease-out;
+}
+
+.htmx-settling {
+  opacity: 1;
+  transition: opacity 200ms ease-in;
+}
+
+/* ── Flash / notification auto-dismiss ────────────────────── */
+.notification.is-dismissing {
+  opacity: 0;
+  transition: opacity 300ms ease-out;
+}
+
+/* ── Focus indicator (ensure visibility) ──────────────────── */
+*:focus-visible {
+  outline: 2px solid hsl(217, 71%, 53%); /* Bulma link colour */
+  outline-offset: 2px;
+}
+
+/* ── Responsive: stack dashboard columns on mobile ────────── */
+@media screen and (max-width: 768px) {
+  .dashboard-columns > .column {
+    margin-bottom: 1rem;
+  }
+}

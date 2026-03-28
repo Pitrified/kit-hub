@@ -9,14 +9,13 @@
         <strong class="ml-2">{{ app_name }}</strong>
       </a>
 
-      {# Burger (mobile toggle) – CSS-only via :target is unreliable,
+      {# Burger (mobile toggle) - CSS-only via :target is unreliable,
          so we use a tiny inline onclick that Bulma documents. #}
       <a role="button"
          class="navbar-burger"
          aria-label="menu"
          aria-expanded="false"
-         data-target="navMenu"
-         onclick="this.classList.toggle('is-active');document.getElementById(this.dataset.target).classList.toggle('is-active')">
+         data-target="navMenu">
         <span aria-hidden="true"></span>
         <span aria-hidden="true"></span>
         <span aria-hidden="true"></span>

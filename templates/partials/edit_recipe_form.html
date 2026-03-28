@@ -1,0 +1,61 @@
+{# Edit step form - loaded via HTMX into #edit-panel on recipe_detail.html #}
+<div class="box">
+  <p class="title is-5 mb-3">Edit a step</p>
+
+  <form hx-post="/pages/recipes/{{ row.id }}/edit"
+        hx-ext="json-enc"
+        hx-target="#edit-panel"
+        hx-swap="innerHTML">
+
+    {# ── Step selector ──────────────────────────────────────── #}
+    <div class="field">
+      <label class="label" for="old_step">Step to correct</label>
+      <div class="control">
+        <div class="select is-fullwidth">
+          <select name="old_step" id="old_step" required>
+            {% for prep in recipe.preparations %}
+            <optgroup label="{{ prep.preparation_name or ('Preparation ' ~ loop.index) }}">
+              {% for step in prep.steps %}
+              {% if step.type == "text" and step.instruction %}
+              <option value="{{ step.instruction }}">
+                Step {{ loop.index }}: {{ step.instruction[:80] }}{% if step.instruction|length > 80 %}…{% endif %}
+              </option>
+              {% endif %}
+              {% endfor %}
+            </optgroup>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+    </div>
+
+    {# ── Correction instruction ─────────────────────────────── #}
+    <div class="field">
+      <label class="label" for="new_step">Correction</label>
+      <div class="control">
+        <textarea class="textarea"
+                  name="new_step"
+                  id="new_step"
+                  rows="3"
+                  placeholder="Describe the change, e.g. 'use 200g instead of 150g' or 'add a pinch of salt'"
+                  required></textarea>
+      </div>
+      <p class="help">Describe what should change in natural language. The LLM editor will rewrite the step.</p>
+    </div>
+
+    {# ── Actions ────────────────────────────────────────────── #}
+    <div class="field is-grouped">
+      <div class="control">
+        <button class="button is-warning" type="submit">
+          Apply correction
+        </button>
+      </div>
+      <div class="control">
+        <button class="button is-light" type="button"
+                data-clear-target="#edit-panel">
+          Cancel
+        </button>
+      </div>
+    </div>
+  </form>
+</div>

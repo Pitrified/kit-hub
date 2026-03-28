@@ -5,6 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import HTTPException
+from fastapi import Request
+from fastapi import Response
 from fastapi import status
 from fastapi_tools.dependencies import get_current_user
 from fastapi_tools.schemas.auth import SessionData
@@ -155,17 +157,23 @@ async def list_recipes(
     "/",
     summary="Create recipe from free text",
     status_code=status.HTTP_201_CREATED,
+    response_model=None,
 )
 async def create_recipe(
+    request: Request,
     body: RecipeCreateRequest,
     session: Annotated[SessionData, Depends(get_current_user)],
     db: Annotated[DatabaseSession, Depends(get_db)],
     crud: Annotated[RecipeCRUDService, Depends(get_crud)],
     transcriber: Annotated[RecipeCoreTranscriber, Depends(get_transcriber)],
-) -> RecipeDetailResponse:
+) -> RecipeDetailResponse | Response:
     """Parse free text into a structured recipe and persist it.
 
+    When the request originates from HTMX, returns an ``HX-Redirect``
+    response pointing to the new recipe's detail page instead of JSON.
+
     Args:
+        request: Incoming request (used to detect HTMX).
         body: Text content and optional source type.
         session: Authenticated user session.
         db: Database session manager.
@@ -173,7 +181,8 @@ async def create_recipe(
         transcriber: LLM chain for text-to-recipe parsing.
 
     Returns:
-        Full detail for the newly created recipe.
+        Full detail for the newly created recipe, or an HX-Redirect
+        response for HTMX callers.
     """
     lg.info(f"Creating recipe from text ({body.source.value}), {len(body.text)} chars")
     recipe_core = await transcriber.ainvoke(body.text)
@@ -185,6 +194,8 @@ async def create_recipe(
             user_id=session.user_id,
         )
     lg.info(f"Created recipe '{recipe_core.name}' (id={row.id})")
+    if request.headers.get("HX-Request"):
+        return Response(status_code=200, headers={"HX-Redirect": f"/recipes/{row.id}"})
     return _row_to_detail(row, tags=[])
 
 
@@ -192,23 +203,30 @@ async def create_recipe(
     "/ingest",
     summary="Ingest recipe from Instagram URL",
     status_code=status.HTTP_201_CREATED,
+    response_model=None,
 )
 async def ingest_recipe(
+    request: Request,
     body: RecipeIngestRequest,
     session: Annotated[SessionData, Depends(get_current_user)],
     db: Annotated[DatabaseSession, Depends(get_db)],
     ingest: Annotated[IngestService, Depends(get_ingest_service)],
-) -> RecipeDetailResponse:
+) -> RecipeDetailResponse | Response:
     """Download an Instagram post, parse it with the LLM, and persist the recipe.
 
+    When the request originates from HTMX, returns an ``HX-Redirect``
+    response pointing to the new recipe's detail page instead of JSON.
+
     Args:
+        request: Incoming request (used to detect HTMX).
         body: Instagram post URL.
         session: Authenticated user session.
         db: Database session manager.
         ingest: Instagram ingestion pipeline.
 
     Returns:
-        Full detail for the ingested recipe.
+        Full detail for the ingested recipe, or an HX-Redirect
+        response for HTMX callers.
 
     Raises:
         HTTPException: 422 when the post has no usable text (no caption or
@@ -230,6 +248,8 @@ async def ingest_recipe(
             detail="Recipe was ingested but could not be retrieved.",
         )
     lg.info(f"Ingested recipe '{row.name}' from {body.url}")
+    if request.headers.get("HX-Request"):
+        return Response(status_code=200, headers={"HX-Redirect": f"/recipes/{row.id}"})
     return _row_to_detail(row)
 
 
