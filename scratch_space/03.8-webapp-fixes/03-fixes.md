@@ -28,6 +28,8 @@ next_idx = max_idx_result.scalar_one() + 1
 
 This places new recipes at the end of the queue instead of colliding at 0. No template changes needed - the displayed number will now be meaningful.
 
+**e9 done** - crud_service.py now queries `coalesce(max(sort_index), -1)` before the insert and sets `sort_index=next_idx`. First recipe gets 0, subsequent ones get max+1.
+
 ---
 
 ## e10
@@ -56,6 +58,8 @@ Remove the `--strict` flag from `.github/workflows/docs.yml`:
 ```
 
 Single-line change. If we later want to enforce strictness, we can re-enable it after fixing all warnings.
+
+**e10 done** - docs.yml drops `--strict`.
 
 ---
 
@@ -92,3 +96,38 @@ When kit-hub imports anything from these packages, their `__init__.py` fires and
 **`media-downloader`**: Same - remove the `load_env()` call from `src/media_downloader/__init__.py`.
 
 Libraries should never have env-loading side effects on import. Only the consuming application (kit-hub) should call `load_env()`, and it already does.
+
+**e11 - pattern analysis**
+
+The fastapi-tools pattern is the correct one. Here's the full diff vs the broken dependency pattern:
+
+| | `llm-core` / `media-downloader` (broken) | `fastapi-tools` (correct) |
+|---|---|---|
+| `src/pkg/__init__.py` | imports + calls `load_env()` | only exports public API, no side effects |
+| conftest.py | stubs `os.environ` for secrets only | calls `load_env()` at the top - runs _before_ any test imports |
+
+The fix for both `llm-core` and `media-downloader` is a two-file change per repo:
+
+**1. Remove the side effect from __init__.py**
+
+In `llm-core/src/llm_core/__init__.py`, delete:
+```python
+from llm_core.params.load_env import load_env
+
+load_env()
+```
+
+Same for `media_downloader/__init__.py`. The `load_env` function stays in `params/load_env.py` - only the auto-call on import goes away.
+
+**2. Call `load_env()` explicitly in conftest.py**
+
+Replace the stub the llm-core and media-downloader conftests currently have with:
+```python
+from llm_core.params.load_env import load_env  # (or media_downloader.params…)
+
+load_env()
+```
+
+This mirrors exactly what `fastapi-tools/tests/conftest.py` does. pytest loads conftest.py before any test module is collected, so the credentials are in the environment before any singleton fires - the same guarantee the auto-call was trying to provide, but without poisoning downstream consumers.
+
+Made changes.
