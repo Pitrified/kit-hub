@@ -80,11 +80,13 @@ nav:
       - Pre-commit Hooks: guides/pre_commit.md
       - Params / Config Pattern: guides/params_config.md
       - Webapp setup: guides/webapp_setup.md
+      - Webapp User Guide: guides/user-guide-webapp.md
   - Library:
       - Database Layer: library/db_layer.md
       - LLM Chains: library/llm_chains.md
       - Ingestion Layer: library/ingestion.md
       - Voice Notes: library/voice_notes.md
+      - Webapp Layer: library/webapp.md
   - API Reference: reference/
   - Contributing: contributing.md
 

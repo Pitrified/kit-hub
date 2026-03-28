@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+
+{% block title %}My Recipes – {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+
+    {# ── Header ─────────────────────────────────────────────── #}
+    <div class="level mb-4">
+      <div class="level-left">
+        <div>
+          <h1 class="title is-3">My Recipes</h1>
+          <p class="subtitle is-6 has-text-grey">Browse, add, and manage your recipe collection.</p>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="buttons">
+          <a href="/voice" class="button is-light">
+            <span class="icon">🎙</span><span>Voice Note</span>
+          </a>
+          <a href="/cook" class="button is-warning is-light">
+            <span class="icon">🍳</span><span>Cook Queue</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    {# ── Add recipe panel (accordion-style via HTMX) ─────────── #}
+    <div class="box mb-5">
+      <div class="level mb-0">
+        <div class="level-left">
+          <p class="title is-5 mb-0">Add a Recipe</p>
+        </div>
+        <div class="level-right">
+          <div class="buttons">
+            <button class="button is-primary is-small"
+                    hx-get="/pages/partials/add-recipe-form"
+                    hx-target="#add-recipe-body"
+                    hx-swap="innerHTML"
+                    hx-push-url="false">
+              Paste text
+            </button>
+            <button class="button is-info is-small"
+                    hx-get="/pages/partials/ingest-recipe-form"
+                    hx-target="#add-recipe-body"
+                    hx-swap="innerHTML"
+                    hx-push-url="false">
+              Instagram URL
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="add-recipe-body" class="mt-3"></div>
+    </div>
+
+    {# ── Recipe card grid ────────────────────────────────────── #}
+    {% if recipes %}
+    <div class="columns is-multiline" id="recipe-grid">
+      {% for recipe in recipes %}
+      <div class="column is-12-mobile is-6-tablet is-4-desktop" id="recipe-card-{{ recipe.id }}">
+        <div class="card">
+          <div class="card-content">
+            <p class="title is-5 mb-2">{{ recipe.name }}</p>
+            <div class="tags mb-2">
+              {% if recipe.source == "instagram" %}
+              <span class="tag is-info is-light">Instagram</span>
+              {% elif recipe.source == "voice_note" %}
+              <span class="tag is-warning is-light">Voice</span>
+              {% else %}
+              <span class="tag is-light">Manual</span>
+              {% endif %}
+              {% if recipe.meal_course %}
+              <span class="tag is-primary is-light">{{ recipe.meal_course }}</span>
+              {% endif %}
+              <span class="tag is-light">#{{ recipe.sort_index }}</span>
+            </div>
+          </div>
+          <div class="card-footer">
+            <a href="/recipes/{{ recipe.id }}" class="card-footer-item">
+              View
+            </a>
+            <button class="card-footer-item button is-ghost is-small has-text-danger"
+                    hx-delete="/api/v1/recipes/{{ recipe.id }}"
+                    hx-confirm="Delete '{{ recipe.name }}'? This cannot be undone."
+                    hx-target="#recipe-card-{{ recipe.id }}"
+                    hx-swap="outerHTML swap:0.3s">
+              Delete
+            </button>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    {# ── Pagination ──────────────────────────────────────────── #}
+    {% if has_prev or has_next %}
+    <nav class="pagination is-centered mt-4" aria-label="Recipe pages">
+      {% if has_prev %}
+      <a href="/recipes?page={{ page - 1 }}&page_size={{ page_size }}"
+         class="pagination-previous">Previous</a>
+      {% else %}
+      <a class="pagination-previous" disabled>Previous</a>
+      {% endif %}
+
+      {% if has_next %}
+      <a href="/recipes?page={{ page + 1 }}&page_size={{ page_size }}"
+         class="pagination-next">Next</a>
+      {% else %}
+      <a class="pagination-next" disabled>Next</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    {# ── Empty state ─────────────────────────────────────────── #}
+    <div class="box has-text-centered py-6">
+      <p class="title is-5 has-text-grey-light">No recipes yet</p>
+      <p class="subtitle is-6 has-text-grey-light">
+        Paste a recipe, paste an Instagram URL above, or record a voice note.
+      </p>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

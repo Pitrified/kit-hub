@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.name }} – {{ app_name }}{% endblock %}
+
+{% block content %}
+<section class="section">
+  <div class="container">
+
+    {# ── Back navigation ─────────────────────────────────────── #}
+    <nav class="breadcrumb mb-4" aria-label="breadcrumbs">
+      <ul>
+        <li><a href="/recipes">Recipes</a></li>
+        <li class="is-active"><a aria-current="page">{{ recipe.name }}</a></li>
+      </ul>
+    </nav>
+
+    {# ── Title + metadata ────────────────────────────────────── #}
+    <div class="level mb-4">
+      <div class="level-left">
+        <div>
+          <h1 class="title is-3">{{ recipe.name }}</h1>
+          <div class="tags">
+            {% if row.source == "instagram" %}
+            <span class="tag is-info is-light">Instagram</span>
+            {% elif row.source == "voice_note" %}
+            <span class="tag is-warning is-light">Voice Note</span>
+            {% else %}
+            <span class="tag is-light">Manual</span>
+            {% endif %}
+            {% if row.meal_course %}
+            <span class="tag is-primary is-light">{{ row.meal_course }}</span>
+            {% endif %}
+            <span class="tag is-light">Sort #{{ row.sort_index }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="level-right">
+        <div class="buttons">
+          <button class="button is-warning is-light is-small"
+                  hx-get="/pages/partials/edit-recipe-form/{{ row.id }}"
+                  hx-target="#edit-panel"
+                  hx-swap="innerHTML"
+                  hx-push-url="false">
+            Edit step
+          </button>
+          <button class="button is-danger is-light is-small"
+                  hx-delete="/api/v1/recipes/{{ row.id }}"
+                  hx-confirm="Delete '{{ recipe.name }}'? This cannot be undone."
+                  hx-push-url="/recipes">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {# ── Optional description ─────────────────────────────────── #}
+    {% if recipe.notes %}
+    <div class="box mb-4">
+      <p class="title is-6 mb-2">Notes</p>
+      <ul>
+        {% for note in recipe.notes %}
+        <li>{{ note }}</li>
+        {% endfor %}
+      </ul>
+    </div>
+    {% endif %}
+
+    {# ── Edit panel (HTMX-loaded form) ──────────────────────── #}
+    <div id="edit-panel" class="mb-4"></div>
+
+    {# ── Preparations ─────────────────────────────────────────── #}
+    {% for prep in recipe.preparations %}
+    <div class="mb-5">
+      {% if prep.preparation_name %}
+      <h2 class="title is-5 mb-3">{{ prep.preparation_name }}</h2>
+      {% elif recipe.preparations | length > 1 %}
+      <h2 class="title is-5 mb-3">Preparation {{ loop.index }}</h2>
+      {% endif %}
+
+      <div class="columns">
+
+        {# ── Ingredients ──────────────────────────────────────── #}
+        {% if prep.ingredients %}
+        <div class="column is-narrow" style="min-width:240px">
+          <div class="box">
+            <p class="title is-6 mb-3">Ingredients</p>
+            <table class="table is-narrow is-fullwidth">
+              <tbody>
+                {% for ing in prep.ingredients %}
+                <tr>
+                  <td class="has-text-weight-semibold">{{ ing.name }}</td>
+                  <td class="has-text-grey">{{ ing.quantity }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endif %}
+
+        {# ── Steps ────────────────────────────────────────────── #}
+        <div class="column">
+          <div class="box">
+            <p class="title is-6 mb-3">Steps</p>
+            <ol>
+              {% for step in prep.steps %}
+              {% if step.type == "text" and step.instruction %}
+              <li class="mb-2">{{ step.instruction }}</li>
+              {% elif step.type == "image" %}
+              <li class="mb-2"><em class="has-text-grey">[image]</em></li>
+              {% endif %}
+              {% endfor %}
+            </ol>
+          </div>
+        </div>
+
+      </div>{# /columns #}
+    </div>
+    {% endfor %}
+
+    {# ── Tags ─────────────────────────────────────────────────── #}
+    {% if row.tags %}
+    <div class="box">
+      <p class="title is-6 mb-2">Tags</p>
+      <div class="tags">
+        {% for tag in row.tags %}
+        <span class="tag is-light" title="confidence {{ tag.confidence | round(2) }} ({{ tag.origin }})">
+          {{ tag.tag_name }}
+        </span>
+        {% endfor %}
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</section>
+{% endblock %}

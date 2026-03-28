@@ -33,6 +33,15 @@
         <a class="navbar-item" href="/dashboard" {% if active_page == 'dashboard' %}aria-current="page"{% endif %}>
           Dashboard
         </a>
+        <a class="navbar-item" href="/recipes" {% if active_page == 'recipes' %}aria-current="page"{% endif %}>
+          Recipes
+        </a>
+        <a class="navbar-item" href="/cook" {% if active_page == 'cook' %}aria-current="page"{% endif %}>
+          Cook Queue
+        </a>
+        <a class="navbar-item" href="/voice" {% if active_page == 'voice' %}aria-current="page"{% endif %}>
+          Voice Note
+        </a>
         {% endif %}
         {% if debug %}
         <a class="navbar-item" href="/docs" target="_blank" rel="noopener">

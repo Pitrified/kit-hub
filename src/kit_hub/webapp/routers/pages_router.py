@@ -7,13 +7,21 @@ from typing import Annotated
 
 from fastapi import APIRouter
 from fastapi import Depends
+from fastapi import HTTPException
 from fastapi import Query
 from fastapi import Request
+from fastapi import status
 from fastapi.responses import HTMLResponse
 from fastapi.responses import RedirectResponse
 from fastapi_tools.dependencies import get_current_user
 from fastapi_tools.dependencies import get_optional_user
 from fastapi_tools.schemas.auth import SessionData
+
+from kit_hub.db.crud_service import RecipeCRUDService
+from kit_hub.db.session import DatabaseSession
+from kit_hub.recipes.recipe_core import RecipeCore
+from kit_hub.webapp.core.dependencies import get_crud
+from kit_hub.webapp.core.dependencies import get_db
 
 # Map OAuth error codes to user-friendly messages
 _ERROR_MESSAGES: dict[str, str] = {
@@ -151,4 +159,184 @@ async def error_page(
             "message": message,
         },
         status_code=status_code,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Recipe pages
+# ---------------------------------------------------------------------------
+
+
+@router.get("/recipes", response_class=HTMLResponse, include_in_schema=False)
+async def recipes_list(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+    page: int = 0,
+    page_size: int = 24,
+) -> HTMLResponse:
+    """Render the recipe browser page.
+
+    Fetches the current user's recipes ordered by sort index and renders
+    a paginated card grid.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+        page: Zero-based page number (default 0).
+        page_size: Recipes per page (default 24).
+
+    Returns:
+        Recipe list page HTML.
+    """
+    async with db.get_session() as dbsession:
+        rows = await crud.list_recipes(
+            dbsession,
+            user_id=user.user_id,
+            limit=page_size + 1,
+            offset=page * page_size,
+        )
+    has_next = len(rows) > page_size
+    recipes = rows[:page_size]
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "pages/recipes.html",
+        {
+            "user": user,
+            "active_page": "recipes",
+            "recipes": recipes,
+            "page": page,
+            "page_size": page_size,
+            "has_next": has_next,
+            "has_prev": page > 0,
+        },
+    )
+
+
+@router.get(
+    "/recipes/{recipe_id}",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def recipe_detail(
+    request: Request,
+    recipe_id: str,
+    user: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+) -> HTMLResponse:
+    """Render the recipe detail page.
+
+    Args:
+        request: Incoming request.
+        recipe_id: UUID string of the recipe to display.
+        user: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+
+    Returns:
+        Recipe detail page HTML.
+
+    Raises:
+        HTTPException: 404 when the recipe does not exist.
+    """
+    async with db.get_session() as dbsession:
+        row = await crud.get_recipe(dbsession, recipe_id=recipe_id)
+    if row is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Recipe not found.",
+        )
+    recipe_core = RecipeCore.model_validate_json(row.recipe_json)
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "pages/recipe_detail.html",
+        {
+            "user": user,
+            "active_page": "recipes",
+            "row": row,
+            "recipe": recipe_core,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Cook-soon queue page
+# ---------------------------------------------------------------------------
+
+
+@router.get("/cook", response_class=HTMLResponse, include_in_schema=False)
+async def cook_queue(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+) -> HTMLResponse:
+    """Render the cook-soon queue page.
+
+    Fetches all of the current user's recipes ordered by sort index for
+    drag-and-drop priority management.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+
+    Returns:
+        Cook-soon queue page HTML.
+    """
+    async with db.get_session() as dbsession:
+        recipes = await crud.list_recipes(
+            dbsession,
+            user_id=user.user_id,
+            limit=200,
+        )
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "pages/cook.html",
+        {
+            "user": user,
+            "active_page": "cook",
+            "recipes": recipes,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Voice note page
+# ---------------------------------------------------------------------------
+
+
+@router.get("/voice", response_class=HTMLResponse, include_in_schema=False)
+async def voice_notes(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+) -> HTMLResponse:
+    """Render the voice note recording page.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+
+    Returns:
+        Voice note page HTML.
+    """
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "pages/voice.html",
+        {
+            "user": user,
+            "active_page": "voice",
+        },
     )

@@ -8,7 +8,12 @@ from fastapi_tools.dependencies import get_current_user
 from fastapi_tools.schemas.auth import SessionData
 from fastapi_tools.schemas.common import MessageResponse
 
+from kit_hub.webapp.api.v1.recipe_router import router as recipe_router
+from kit_hub.webapp.api.v1.voice_router import router as voice_router
+
 router = APIRouter(prefix="/api/v1", tags=["api-v1"])
+router.include_router(recipe_router)
+router.include_router(voice_router)
 
 
 @router.get(
