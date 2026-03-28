@@ -36,9 +36,13 @@
             <span class="icon">🎙</span>
             <span id="btn-record-label">Record clip</span>
           </button>
+          <button class="button is-warning is-hidden" id="btn-stop">
+            <span class="icon">⏹</span>
+            <span>Stop recording</span>
+          </button>
           <span class="tag is-light is-medium" id="record-timer" style="display:none">0s</span>
         </div>
-        <p class="help mb-3" id="record-status">Click to record a clip. Release to transcribe.</p>
+        <p class="help mb-3" id="record-status">Click 'Record clip' to start. Click 'Stop recording' when done.</p>
 
         {# Live transcript #}
         <div class="box" style="min-height:120px; max-height:320px; overflow-y:auto; background:#fafafa">

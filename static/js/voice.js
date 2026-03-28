@@ -8,6 +8,7 @@
   let isRecording = false;
   let timerInterval = null;
   let timerSeconds = 0;
+  let noteCount = 0;
 
   // ── DOM shortcuts ──────────────────────────────────────────
   const $ = id => document.getElementById(id);
@@ -15,6 +16,7 @@
   const stepRecord = $("step-record");
   const btnStart   = $("btn-start-session");
   const btnRecord  = $("btn-record");
+  const btnStop    = $("btn-stop");
   const btnRecordLabel = $("btn-record-label");
   const btnFreeze  = $("btn-freeze");
   const btnToRecipe = $("btn-to-recipe");
@@ -31,6 +33,7 @@
   }
 
   function appendNote(text, timestamp) {
+    noteCount++;
     if (transcriptEmpty) transcriptEmpty.style.display = "none";
     const p = document.createElement("p");
     const ts = new Date(timestamp).toLocaleTimeString();
@@ -66,7 +69,7 @@
       stepStart.classList.add("is-hidden");
       stepRecord.classList.remove("is-hidden");
       btnRecord.disabled = false;
-      setStatus("Session ready. Click 'Record clip' and speak.", recordStatus);
+      setStatus("Session ready. Click 'Record clip' to start recording.", recordStatus);
     } catch (err) {
       setStatus("Error: " + err.message, recordStatus);
       btnStart.disabled = false;
@@ -76,11 +79,8 @@
   });
 
   // ── Record a clip ──────────────────────────────────────────
-  btnRecord.addEventListener("mousedown", startRecording);
-  btnRecord.addEventListener("touchstart", e => { e.preventDefault(); startRecording(); });
-  btnRecord.addEventListener("mouseup", stopRecording);
-  btnRecord.addEventListener("mouseleave", stopRecording);
-  btnRecord.addEventListener("touchend", e => { e.preventDefault(); stopRecording(); });
+  btnRecord.addEventListener("click", startRecording);
+  btnStop.addEventListener("click", stopRecording);
 
   async function startRecording() {
     if (isRecording) return;
@@ -91,8 +91,8 @@
       mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
       mediaRecorder.start();
       isRecording = true;
-      btnRecord.classList.add("is-loading");
-      btnRecordLabel.textContent = "Recording… release to stop";
+      btnRecord.classList.add("is-hidden");
+      btnStop.classList.remove("is-hidden");
       setStatus("Recording… speak now.", recordStatus);
       // Timer
       timerSeconds = 0;
@@ -113,8 +113,8 @@
     if (recordTimer) recordTimer.style.display = "none";
     mediaRecorder.stop();
     isRecording = false;
-    btnRecord.classList.remove("is-loading");
-    btnRecordLabel.textContent = "Record clip";
+    btnStop.classList.add("is-hidden");
+    btnRecord.classList.remove("is-hidden");
     setStatus("Transcribing…", recordStatus);
 
     mediaRecorder.onstop = async () => {
@@ -145,6 +145,10 @@
 
   // ── Freeze session ─────────────────────────────────────────
   btnFreeze.addEventListener("click", async () => {
+    if (noteCount === 0) {
+      setStatus("Record at least one clip before freezing the session.", actionStatus);
+      return;
+    }
     btnFreeze.disabled = true;
     btnFreeze.classList.add("is-loading");
     try {
@@ -175,7 +179,10 @@
         method: "POST",
         headers: { "Content-Type": "application/json", ...csrfHeader() },
       });
-      if (!resp.ok) { throw new Error("Conversion failed"); }
+      if (!resp.ok) {
+        const errBody = await resp.json().catch(() => ({}));
+        throw new Error(errBody.detail ?? "Conversion failed");
+      }
       const detail = await resp.json();
       // Navigate to the new recipe
       window.location.href = `/recipes/${detail.id}`;
