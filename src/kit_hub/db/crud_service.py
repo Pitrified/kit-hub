@@ -18,6 +18,7 @@ from datetime import UTC
 from datetime import datetime
 import uuid
 
+from sqlalchemy import func
 from sqlalchemy import select
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -53,8 +54,8 @@ class RecipeCRUDService:
     ) -> RecipeRow:
         """Persist a new recipe and return the resulting row.
 
-        The ``sort_index`` is set to ``0`` for new recipes; use
-        ``reorder_recipes`` to adjust priorities after creation.
+        The ``sort_index`` is set to ``max_existing + 1`` so new recipes
+        are appended at the end of the queue.
 
         Args:
             session: Active database session.
@@ -67,6 +68,10 @@ class RecipeCRUDService:
         Returns:
             RecipeRow: The newly created ORM row with all columns populated.
         """
+        max_idx_result = await session.execute(
+            select(func.coalesce(func.max(RecipeRow.sort_index), -1))
+        )
+        next_idx = max_idx_result.scalar_one() + 1
         row = RecipeRow(
             id=str(uuid.uuid4()),
             name=recipe.name,
@@ -76,7 +81,7 @@ class RecipeCRUDService:
             recipe_json=recipe.model_dump_json(),
             user_id=user_id,
             is_public=False,
-            sort_index=0,
+            sort_index=next_idx,
             created_at=datetime.now(UTC),
             updated_at=datetime.now(UTC),
         )
