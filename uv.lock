@@ -1170,7 +1170,7 @@ requires-dist = [
     { name = "alembic", specifier = ">=1.14.0" },
     { name = "dotenv", specifier = ">=0.9.9" },
     { name = "fastapi-tools", marker = "extra == 'webapp'", git = "https://github.com/Pitrified/fastapi-tools?rev=v0.1.0" },
-    { name = "llm-core", extras = ["all"], git = "https://github.com/Pitrified/llm-core?rev=v0.2.0" },
+    { name = "llm-core", extras = ["all"], git = "https://github.com/Pitrified/llm-core?rev=v0.2.1" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "media-downloader", extras = ["instagram"], git = "https://github.com/Pitrified/media-downloader?rev=v0.1.1" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
@@ -1405,8 +1405,8 @@ wheels = [
 
 [[package]]
 name = "llm-core"
-version = "0.2.0"
-source = { git = "https://github.com/Pitrified/llm-core?rev=v0.2.0#41064351b13ff3589828070819eb2184a79c043a" }
+version = "0.2.1"
+source = { git = "https://github.com/Pitrified/llm-core?rev=v0.2.1#7a3e156c2dbe408bc8a2b3857eb5178a3b5b1836" }
 dependencies = [
     { name = "dotenv" },
     { name = "jinja2" },
