@@ -15,10 +15,14 @@ what is the point of freezing the session? can it be restarted later? from where
 
 footer should be fixed at the bottom of the page
 
+UPDATE: still floating up
+
 ## delete button
 
 in `http://localhost:8000/recipes`
 delete button is small and at the top of the box, should be centered like `view`
+
+UPDATE: ok
 
 ## filter recipes
 

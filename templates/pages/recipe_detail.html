@@ -18,7 +18,7 @@
     <div class="level mb-4">
       <div class="level-left">
         <div>
-          <h1 class="title is-3">{{ recipe.name }}</h1>
+          <h1 class="title is-3" id="recipe-name" data-field="name">{{ recipe.name }}</h1>
           <div class="tags">
             {% if row.source == "instagram" %}
             <span class="tag is-info is-light">Instagram</span>
@@ -28,7 +28,7 @@
             <span class="tag is-light">Manual</span>
             {% endif %}
             {% if row.meal_course %}
-            <span class="tag is-primary is-light">{{ row.meal_course }}</span>
+            <span class="tag is-primary is-light" id="meal-course-display">{{ row.meal_course }}</span>
             {% endif %}
             <span class="tag is-light">Sort #{{ row.sort_index }}</span>
           </div>
@@ -36,12 +36,15 @@
       </div>
       <div class="level-right">
         <div class="buttons">
+          <button class="button is-primary is-light is-small" id="btn-toggle-edit">
+            Edit recipe
+          </button>
           <button class="button is-warning is-light is-small"
                   hx-get="/pages/partials/edit-recipe-form/{{ row.id }}"
                   hx-target="#edit-panel"
                   hx-swap="innerHTML"
                   hx-push-url="false">
-            Edit step
+            AI edit
           </button>
           <button class="button is-danger is-light is-small"
                   hx-delete="/api/v1/recipes/{{ row.id }}"
@@ -53,28 +56,63 @@
       </div>
     </div>
 
+    {# ── Edit mode toolbar (hidden by default) ───────────────── #}
+    <div id="edit-toolbar" class="notification is-light is-hidden mb-4">
+      <div class="level">
+        <div class="level-left">
+          <p class="has-text-weight-semibold">Edit mode</p>
+        </div>
+        <div class="level-right">
+          <div class="buttons">
+            <button class="button is-success is-small" id="btn-save-edit">Save</button>
+            <button class="button is-light is-small" id="btn-cancel-edit">Cancel</button>
+          </div>
+        </div>
+      </div>
+      {# Meal course selector (shown only in edit mode) #}
+      <div class="field is-horizontal mt-2">
+        <div class="field-label is-small"><label class="label">Meal course</label></div>
+        <div class="field-body">
+          <div class="control">
+            <div class="select is-small">
+              <select id="edit-meal-course">
+                <option value="">None</option>
+                {% for mc in ["pani","antipasti","primi","secondi","fritti","contorni","dolci","alcol"] %}
+                <option value="{{ mc }}" {% if row.meal_course == mc %}selected{% endif %}>{{ mc | title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p id="edit-save-status" class="help mt-2" aria-live="polite"></p>
+    </div>
+
     {# ── Optional description ─────────────────────────────────── #}
+    <div id="notes-section">
     {% if recipe.notes %}
     <div class="box mb-4">
       <p class="title is-6 mb-2">Notes</p>
-      <ul>
+      <ul id="notes-list">
         {% for note in recipe.notes %}
-        <li>{{ note }}</li>
+        <li data-note-idx="{{ loop.index0 }}">{{ note }}</li>
         {% endfor %}
       </ul>
     </div>
     {% endif %}
+    </div>
 
     {# ── Edit panel (HTMX-loaded form) ──────────────────────── #}
     <div id="edit-panel" class="mb-4"></div>
 
     {# ── Preparations ─────────────────────────────────────────── #}
+    <div id="preparations-section">
     {% for prep in recipe.preparations %}
-    <div class="mb-5">
+    <div class="mb-5" data-prep-idx="{{ loop.index0 }}">
       {% if prep.preparation_name %}
-      <h2 class="title is-5 mb-3">{{ prep.preparation_name }}</h2>
+      <h2 class="title is-5 mb-3 prep-name">{{ prep.preparation_name }}</h2>
       {% elif recipe.preparations | length > 1 %}
-      <h2 class="title is-5 mb-3">Preparation {{ loop.index }}</h2>
+      <h2 class="title is-5 mb-3 prep-name">Preparation {{ loop.index }}</h2>
       {% endif %}
 
       <div class="columns">
@@ -85,11 +123,11 @@
           <div class="box">
             <p class="title is-6 mb-3">Ingredients</p>
             <table class="table is-narrow is-fullwidth">
-              <tbody>
+              <tbody class="ing-tbody">
                 {% for ing in prep.ingredients %}
-                <tr>
-                  <td class="has-text-weight-semibold">{{ ing.name }}</td>
-                  <td class="has-text-grey">{{ ing.quantity }}</td>
+                <tr data-ing-idx="{{ loop.index0 }}">
+                  <td class="has-text-weight-semibold ing-name">{{ ing.name }}</td>
+                  <td class="has-text-grey ing-qty">{{ ing.quantity }}</td>
                 </tr>
                 {% endfor %}
               </tbody>
@@ -102,12 +140,12 @@
         <div class="column">
           <div class="box">
             <p class="title is-6 mb-3">Steps</p>
-            <ol>
+            <ol class="steps-list">
               {% for step in prep.steps %}
               {% if step.type == "text" and step.instruction %}
-              <li class="mb-2">{{ step.instruction }}</li>
+              <li class="mb-2 step-text" data-step-idx="{{ loop.index0 }}">{{ step.instruction }}</li>
               {% elif step.type == "image" %}
-              <li class="mb-2"><em class="has-text-grey">[image]</em></li>
+              <li class="mb-2" data-step-idx="{{ loop.index0 }}" data-step-type="image"><em class="has-text-grey">[image]</em></li>
               {% endif %}
               {% endfor %}
             </ol>
@@ -117,6 +155,7 @@
       </div>{# /columns #}
     </div>
     {% endfor %}
+    </div>
 
     {# ── Tags ─────────────────────────────────────────────────── #}
     {% if row.tags %}
@@ -132,6 +171,60 @@
     </div>
     {% endif %}
 
+    {# ── Source info ──────────────────────────────────────────── #}
+    <div class="box">
+      <p class="title is-6 mb-2">Source</p>
+
+      {% if row.source == "instagram" %}
+        {% if original_url %}
+        <p class="mb-2">
+          <a href="{{ original_url }}" target="_blank" rel="noopener">
+            {{ original_url }}
+          </a>
+        </p>
+        {% elif row.source_id %}
+        <p class="mb-2">
+          <a href="https://www.instagram.com/p/{{ row.source_id }}/" target="_blank" rel="noopener">
+            https://www.instagram.com/p/{{ row.source_id }}/
+          </a>
+        </p>
+        {% endif %}
+        {% if raw_input_text %}
+        <details>
+          <summary class="has-text-grey is-clickable">Original caption &amp; transcript</summary>
+          <pre class="mt-2" style="white-space:pre-wrap; font-size:0.85rem;">{{ raw_input_text }}</pre>
+        </details>
+        {% endif %}
+
+      {% elif row.source == "voice_note" %}
+        {% if raw_input_text %}
+        <details>
+          <summary class="has-text-grey is-clickable">Voice transcript</summary>
+          <pre class="mt-2" style="white-space:pre-wrap; font-size:0.85rem;">{{ raw_input_text }}</pre>
+        </details>
+        {% else %}
+        <p class="has-text-grey">Voice transcript not available.</p>
+        {% endif %}
+
+      {% else %}
+        {% if raw_input_text %}
+        <details>
+          <summary class="has-text-grey is-clickable">Original text</summary>
+          <pre class="mt-2" style="white-space:pre-wrap; font-size:0.85rem;">{{ raw_input_text }}</pre>
+        </details>
+        {% else %}
+        <p class="has-text-grey">Original text not available.</p>
+        {% endif %}
+      {% endif %}
+    </div>
+
   </div>
 </section>
+
+<script id="recipe-data" type="application/json">{{ recipe.model_dump_json() }}</script>
+<script>window.__recipeId = "{{ row.id }}";</script>
+{% endblock %}
+
+{% block scripts_extra %}
+<script src="/static/js/recipe-edit.js"></script>
 {% endblock %}

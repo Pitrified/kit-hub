@@ -23,6 +23,8 @@ from kit_hub.ingestion.ingest_service import IngestService
 from kit_hub.llm.editor import RecipeCoreEditor
 from kit_hub.llm.transcriber import RecipeCoreTranscriber
 from kit_hub.recipes.recipe_core import RecipeCore
+from kit_hub.recipes.recipe_enums import MealCourse
+from kit_hub.recipes.recipe_enums import RecipeSource
 from kit_hub.recipes.tag import RecipeTagAssignment
 from kit_hub.webapp.api.schemas import RecipeCreateRequest
 from kit_hub.webapp.api.schemas import RecipeDetailResponse
@@ -114,6 +116,9 @@ async def list_recipes(
     crud: Annotated[RecipeCRUDService, Depends(get_crud)],
     page: int = 0,
     page_size: int = 20,
+    source: str = "",
+    meal_course: str = "",
+    search: str = "",
 ) -> RecipeListResponse:
     """Return a paginated list of recipe summaries ordered by sort index.
 
@@ -123,16 +128,26 @@ async def list_recipes(
         crud: Recipe CRUD service.
         page: Zero-based page number (default 0).
         page_size: Recipes per page (default 20).
+        source: Filter by recipe origin channel.
+        meal_course: Filter by meal course category.
+        search: Case-insensitive substring match on recipe name.
 
     Returns:
         Paginated list of recipe summaries.
     """
+    source_enum = RecipeSource(source) if source else None
+    course_enum = MealCourse(meal_course) if meal_course else None
+    search_val = search or None
+
     async with db.get_session() as dbsession:
         rows = await crud.list_recipes(
             dbsession,
             user_id=session.user_id,
             limit=page_size,
             offset=page * page_size,
+            source=source_enum,
+            meal_course=course_enum,
+            search=search_val,
         )
     items = [
         RecipeListItem(
@@ -192,6 +207,7 @@ async def create_recipe(
             recipe=recipe_core,
             source=body.source,
             user_id=session.user_id,
+            raw_input_text=body.text,
         )
     lg.info(f"Created recipe '{recipe_core.name}' (id={row.id})")
     if request.headers.get("HX-Request"):

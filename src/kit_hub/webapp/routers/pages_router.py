@@ -22,6 +22,8 @@ from kit_hub.db.crud_service import RecipeCRUDService
 from kit_hub.db.session import DatabaseSession
 from kit_hub.llm.editor import RecipeCoreEditor
 from kit_hub.recipes.recipe_core import RecipeCore
+from kit_hub.recipes.recipe_enums import MealCourse
+from kit_hub.recipes.recipe_enums import RecipeSource
 from kit_hub.webapp.api.schemas import RecipeEditRequest
 from kit_hub.webapp.core.dependencies import get_crud
 from kit_hub.webapp.core.dependencies import get_db
@@ -125,6 +127,106 @@ async def user_card_partial(
 
 
 @router.get(
+    "/pages/partials/recipe-grid",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def recipe_grid_partial(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+    source: str = "",
+    meal_course: str = "",
+    search: str = "",
+) -> HTMLResponse:
+    """Return filtered recipe card grid HTML fragment for HTMX swap.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+        source: Filter by recipe origin channel.
+        meal_course: Filter by meal course category.
+        search: Case-insensitive substring match on recipe name.
+
+    Returns:
+        Recipe grid partial HTML (no base layout).
+    """
+    source_enum = RecipeSource(source) if source else None
+    course_enum = MealCourse(meal_course) if meal_course else None
+    search_val = search or None
+
+    async with db.get_session() as dbsession:
+        recipes = await crud.list_recipes(
+            dbsession,
+            user_id=user.user_id,
+            limit=24,
+            source=source_enum,
+            meal_course=course_enum,
+            search=search_val,
+        )
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "partials/recipe_grid.html",
+        {"recipes": recipes},
+    )
+
+
+@router.get(
+    "/pages/partials/cook-table",
+    response_class=HTMLResponse,
+    include_in_schema=False,
+)
+async def cook_table_partial(
+    request: Request,
+    user: Annotated[SessionData, Depends(get_current_user)],
+    db: Annotated[DatabaseSession, Depends(get_db)],
+    crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+    source: str = "",
+    meal_course: str = "",
+    search: str = "",
+) -> HTMLResponse:
+    """Return filtered cook queue table body HTML fragment for HTMX swap.
+
+    Args:
+        request: Incoming request.
+        user: Authenticated user session.
+        db: Database session manager.
+        crud: Recipe CRUD service.
+        source: Filter by recipe origin channel.
+        meal_course: Filter by meal course category.
+        search: Case-insensitive substring match on recipe name.
+
+    Returns:
+        Cook table body partial HTML (no base layout).
+    """
+    source_enum = RecipeSource(source) if source else None
+    course_enum = MealCourse(meal_course) if meal_course else None
+    search_val = search or None
+
+    async with db.get_session() as dbsession:
+        recipes = await crud.list_recipes(
+            dbsession,
+            user_id=user.user_id,
+            limit=200,
+            source=source_enum,
+            meal_course=course_enum,
+            search=search_val,
+        )
+
+    templates = request.app.state.templates
+    return templates.TemplateResponse(
+        request,
+        "partials/cook_table.html",
+        {"recipes": recipes},
+    )
+
+
+@router.get(
     "/error/{status_code}",
     response_class=HTMLResponse,
     include_in_schema=False,
@@ -179,11 +281,15 @@ async def recipes_list(
     crud: Annotated[RecipeCRUDService, Depends(get_crud)],
     page: int = 0,
     page_size: int = 24,
+    source: str = "",
+    meal_course: str = "",
+    search: str = "",
 ) -> HTMLResponse:
     """Render the recipe browser page.
 
     Fetches the current user's recipes ordered by sort index and renders
-    a paginated card grid.
+    a paginated card grid. Supports filtering by source, meal course, and
+    text search on recipe name.
 
     Args:
         request: Incoming request.
@@ -192,16 +298,26 @@ async def recipes_list(
         crud: Recipe CRUD service.
         page: Zero-based page number (default 0).
         page_size: Recipes per page (default 24).
+        source: Filter by recipe origin channel.
+        meal_course: Filter by meal course category.
+        search: Case-insensitive substring match on recipe name.
 
     Returns:
         Recipe list page HTML.
     """
+    source_enum = RecipeSource(source) if source else None
+    course_enum = MealCourse(meal_course) if meal_course else None
+    search_val = search or None
+
     async with db.get_session() as dbsession:
         rows = await crud.list_recipes(
             dbsession,
             user_id=user.user_id,
             limit=page_size + 1,
             offset=page * page_size,
+            source=source_enum,
+            meal_course=course_enum,
+            search=search_val,
         )
     has_next = len(rows) > page_size
     recipes = rows[:page_size]
@@ -218,6 +334,11 @@ async def recipes_list(
             "page_size": page_size,
             "has_next": has_next,
             "has_prev": page > 0,
+            "source": source,
+            "meal_course": meal_course,
+            "search": search,
+            "sources": [s.value for s in RecipeSource],
+            "meal_courses": [m.value for m in MealCourse],
         },
     )
 
@@ -267,6 +388,8 @@ async def recipe_detail(
             "active_page": "recipes",
             "row": row,
             "recipe": recipe_core,
+            "original_url": row.original_url,
+            "raw_input_text": row.raw_input_text,
         },
     )
 
@@ -282,26 +405,40 @@ async def cook_queue(
     user: Annotated[SessionData, Depends(get_current_user)],
     db: Annotated[DatabaseSession, Depends(get_db)],
     crud: Annotated[RecipeCRUDService, Depends(get_crud)],
+    source: str = "",
+    meal_course: str = "",
+    search: str = "",
 ) -> HTMLResponse:
     """Render the cook-soon queue page.
 
     Fetches all of the current user's recipes ordered by sort index for
-    drag-and-drop priority management.
+    drag-and-drop priority management. Supports filtering by source,
+    meal course, and text search.
 
     Args:
         request: Incoming request.
         user: Authenticated user session.
         db: Database session manager.
         crud: Recipe CRUD service.
+        source: Filter by recipe origin channel.
+        meal_course: Filter by meal course category.
+        search: Case-insensitive substring match on recipe name.
 
     Returns:
         Cook-soon queue page HTML.
     """
+    source_enum = RecipeSource(source) if source else None
+    course_enum = MealCourse(meal_course) if meal_course else None
+    search_val = search or None
+
     async with db.get_session() as dbsession:
         recipes = await crud.list_recipes(
             dbsession,
             user_id=user.user_id,
             limit=200,
+            source=source_enum,
+            meal_course=course_enum,
+            search=search_val,
         )
 
     templates = request.app.state.templates
@@ -312,6 +449,11 @@ async def cook_queue(
             "user": user,
             "active_page": "cook",
             "recipes": recipes,
+            "source": source,
+            "meal_course": meal_course,
+            "search": search,
+            "sources": [s.value for s in RecipeSource],
+            "meal_courses": [m.value for m in MealCourse],
         },
     )
 

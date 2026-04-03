@@ -193,4 +193,122 @@
     }
   });
 
+  // ── Frozen sessions list ────────────────────────────────────
+  const frozenList = $("frozen-sessions-list");
+  const frozenEmpty = $("frozen-empty");
+
+  async function loadFrozenSessions() {
+    try {
+      const resp = await fetch("/api/v1/voice/sessions/frozen", {
+        headers: csrfHeader(),
+      });
+      if (!resp.ok) {
+        setStatus("Failed to load frozen sessions", frozenEmpty);
+        return;
+      }
+      const sessions = await resp.json();
+      frozenList.innerHTML = "";
+      if (sessions.length === 0) {
+        frozenList.innerHTML = '<p class="has-text-grey is-size-7">No frozen sessions.</p>';
+        return;
+      }
+      for (const s of sessions) {
+        const noteCount = (s.note.notes || []).length;
+        const startTime = s.note.start_time
+          ? new Date(s.note.start_time).toLocaleString()
+          : "Unknown";
+        const box = document.createElement("div");
+        box.className = "box mb-3";
+        box.innerHTML = `
+          <div class="is-flex is-justify-content-space-between is-align-items-center">
+            <div>
+              <p class="has-text-weight-semibold is-size-6">
+                Session <span class="tag is-light">${escHtml(s.session_id)}</span>
+              </p>
+              <p class="is-size-7 has-text-grey">${startTime} &middot; ${noteCount} clip${noteCount !== 1 ? "s" : ""}</p>
+            </div>
+            <div class="buttons are-small">
+              <button class="button is-info is-outlined" data-action="resume" data-sid="${escHtml(s.session_id)}">Resume</button>
+              <button class="button is-success is-outlined" data-action="convert" data-sid="${escHtml(s.session_id)}">Convert</button>
+              <button class="button is-danger is-outlined" data-action="delete" data-sid="${escHtml(s.session_id)}">Delete</button>
+            </div>
+          </div>`;
+        frozenList.appendChild(box);
+      }
+    } catch (_) {
+      frozenList.innerHTML = '<p class="has-text-grey is-size-7">Error loading frozen sessions.</p>';
+    }
+  }
+
+  frozenList.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-action]");
+    if (!btn) return;
+    const action = btn.dataset.action;
+    const sid = btn.dataset.sid;
+    btn.disabled = true;
+    btn.classList.add("is-loading");
+
+    try {
+      if (action === "resume") {
+        const resp = await fetch(`/api/v1/voice/${sid}/unfreeze`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...csrfHeader() },
+        });
+        if (!resp.ok) throw new Error("Unfreeze failed");
+        // Switch the main UI to this session
+        const data = await resp.json();
+        sessionId = sid;
+        sessionTag.textContent = sid;
+        stepStart.classList.add("is-hidden");
+        stepRecord.classList.remove("is-hidden");
+        btnRecord.disabled = false;
+        btnFreeze.disabled = false;
+        btnFreeze.classList.remove("is-hidden");
+        btnToRecipe.classList.add("is-hidden");
+        // Populate existing transcript
+        transcriptList.innerHTML = "";
+        const notes = data.notes || [];
+        noteCount = notes.length;
+        if (noteCount > 0 && transcriptEmpty) transcriptEmpty.style.display = "none";
+        for (const n of notes) {
+          appendNote(n.text, n.timestamp);
+        }
+        setStatus("Session resumed. You can record more clips.", recordStatus);
+        await loadFrozenSessions();
+
+      } else if (action === "convert") {
+        const resp = await fetch(`/api/v1/voice/${sid}/to-recipe`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", ...csrfHeader() },
+        });
+        if (!resp.ok) {
+          const errBody = await resp.json().catch(() => ({}));
+          throw new Error(errBody.detail ?? "Conversion failed");
+        }
+        const detail = await resp.json();
+        window.location.href = `/recipes/${detail.id}`;
+
+      } else if (action === "delete") {
+        if (!confirm("Delete this session permanently?")) {
+          btn.disabled = false;
+          btn.classList.remove("is-loading");
+          return;
+        }
+        const resp = await fetch(`/api/v1/voice/${sid}`, {
+          method: "DELETE",
+          headers: csrfHeader(),
+        });
+        if (!resp.ok) throw new Error("Delete failed");
+        await loadFrozenSessions();
+      }
+    } catch (err) {
+      setStatus("Error: " + err.message, actionStatus);
+      btn.disabled = false;
+      btn.classList.remove("is-loading");
+    }
+  });
+
+  // Load frozen sessions on page load
+  loadFrozenSessions();
+
 })();

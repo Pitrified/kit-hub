@@ -1,0 +1,45 @@
+{% if recipes %}
+<div class="columns is-multiline" id="recipe-grid">
+  {% for recipe in recipes %}
+  <div class="column is-12-mobile is-6-tablet is-4-desktop" id="recipe-card-{{ recipe.id }}">
+    <div class="card">
+      <div class="card-content">
+        <p class="title is-5 mb-2">{{ recipe.name }}</p>
+        <div class="tags mb-2">
+          {% if recipe.source == "instagram" %}
+          <span class="tag is-info is-light">Instagram</span>
+          {% elif recipe.source == "voice_note" %}
+          <span class="tag is-warning is-light">Voice</span>
+          {% else %}
+          <span class="tag is-light">Manual</span>
+          {% endif %}
+          {% if recipe.meal_course %}
+          <span class="tag is-primary is-light">{{ recipe.meal_course }}</span>
+          {% endif %}
+          <span class="tag is-light">#{{ recipe.sort_index }}</span>
+        </div>
+      </div>
+      <div class="card-footer">
+        <a href="/recipes/{{ recipe.id }}" class="card-footer-item">
+          View
+        </a>
+        <button class="card-footer-item has-text-danger"
+                hx-delete="/api/v1/recipes/{{ recipe.id }}"
+                hx-confirm="Delete '{{ recipe.name }}'? This cannot be undone."
+                hx-target="#recipe-card-{{ recipe.id }}"
+                hx-swap="outerHTML swap:0.3s">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="box has-text-centered py-6">
+  <p class="title is-5 has-text-grey-light">No matching recipes</p>
+  <p class="subtitle is-6 has-text-grey-light">
+    Try changing your search or filter criteria.
+  </p>
+</div>
+{% endif %}

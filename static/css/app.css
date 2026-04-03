@@ -4,6 +4,33 @@
  * Keep it minimal — prefer Bulma classes in templates.
  */
 
+/* ── Sticky footer ─────────────────────────────────────────── */
+html {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+main#main-content {
+  flex: 1 0 auto;
+}
+
+.footer {
+  flex-shrink: 0;
+}
+
+/* ── Button card-footer-item reset ────────────────────────── */
+button.card-footer-item {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: inherit;
+}
+
 /* ── Skip-nav link ─────────────────────────────────────────── */
 .skip-link {
   position: absolute;
@@ -61,4 +88,16 @@
   .dashboard-columns > .column {
     margin-bottom: 1rem;
   }
+}
+
+/* ── Edit mode styling ────────────────────────────────────── */
+.editable-field {
+  outline: 1px dashed hsl(0, 0%, 80%);
+  border-radius: 4px;
+  padding: 2px 4px;
+  min-height: 1.5em;
+}
+
+.editable-field:focus {
+  outline: 2px solid hsl(217, 71%, 53%);
 }

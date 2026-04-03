@@ -49,6 +49,11 @@ class RecipeRow(Base):
             ``"manual"``).
         source_id: Platform-specific identifier (IG shortcode, note ID, or
             empty string for manual entries).
+        original_url: Full source URL (e.g. the Instagram post URL).
+            ``None`` for recipes created before this column was added.
+        raw_input_text: The exact text that was fed to the LLM transcriber
+            (caption+transcript, voice transcript, or pasted text).  ``None``
+            for recipes created before this column was added.
         meal_course: Italian meal-course classification.  ``None`` when not
             yet classified.
         recipe_json: Full ``RecipeCore`` serialised as a JSON string.
@@ -66,6 +71,8 @@ class RecipeRow(Base):
     name: Mapped[str] = mapped_column(String(512), nullable=False)
     source: Mapped[str] = mapped_column(String(64), nullable=False)
     source_id: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    original_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
+    raw_input_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     meal_course: Mapped[str | None] = mapped_column(String(64), nullable=True)
     recipe_json: Mapped[str] = mapped_column(Text, nullable=False)
     user_id: Mapped[str | None] = mapped_column(String(256), nullable=True)

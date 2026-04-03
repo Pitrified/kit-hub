@@ -114,6 +114,8 @@ class IngestService:
                 source=RecipeSource.INSTAGRAM,
                 source_id=media.source_id,
                 user_id=user_id,
+                original_url=url,
+                raw_input_text=text,
             )
         lg.info(f"Ingested recipe '{recipe.name}' from {url}")
         return recipe
@@ -143,6 +145,7 @@ class IngestService:
                 recipe,
                 source=source,
                 user_id=user_id,
+                raw_input_text=text,
             )
         lg.info(f"Ingested recipe '{recipe.name}' from {source.value}")
         return recipe

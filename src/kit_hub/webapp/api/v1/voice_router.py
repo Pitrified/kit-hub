@@ -188,6 +188,7 @@ async def voice_to_recipe(
         )
     lg.info(f"Converting voice session {session_id!r} to recipe")
     recipe_core = await voice_converter.convert(recipe_note=recipe_note)
+    raw_text = recipe_note.to_string()
     async with db.get_session() as dbsession:
         row = await crud.create_recipe(
             dbsession,
@@ -195,11 +196,30 @@ async def voice_to_recipe(
             source=RecipeSource.VOICE_NOTE,
             source_id=session_id,
             user_id=_session.user_id,
+            raw_input_text=raw_text,
         )
     lg.info(f"Created recipe '{recipe_core.name}' from voice session {session_id!r}")
     from kit_hub.webapp.api.v1.recipe_router import _row_to_detail  # noqa: PLC0415
 
     return _row_to_detail(row, tags=[])
+
+
+@router.get("/sessions/frozen", summary="List frozen voice sessions")
+async def list_frozen_sessions(
+    session: Annotated[SessionData, Depends(get_current_user)],
+    voice_manager: Annotated[VoiceSessionManager, Depends(get_voice_manager)],
+) -> list[dict]:  # type: ignore[type-arg]
+    """Return all frozen voice sessions for the current user.
+
+    Args:
+        session: Authenticated user session.
+        voice_manager: Voice session lifecycle manager.
+
+    Returns:
+        List of dicts with ``session_id`` and the ``RecipeNote`` payload.
+    """
+    frozen = voice_manager.list_frozen_sessions(user_id=session.user_id)
+    return [{"session_id": sid, "note": _note_to_detail(note)} for sid, note in frozen]
 
 
 @router.get("/{session_id}", summary="Get voice session transcript")
@@ -228,3 +248,62 @@ async def get_voice_session(
             detail=f"Voice session not found: {session_id}",
         )
     return _note_to_detail(recipe_note)
+
+
+@router.post("/{session_id}/unfreeze", summary="Unfreeze a voice session")
+async def unfreeze_voice_session(
+    session_id: str,
+    _session: Annotated[SessionData, Depends(get_current_user)],
+    voice_manager: Annotated[VoiceSessionManager, Depends(get_voice_manager)],
+) -> dict:  # type: ignore[type-arg]
+    """Unfreeze a previously frozen session so more audio can be appended.
+
+    Args:
+        session_id: Target voice session identifier.
+        _session: Authenticated user session.
+        voice_manager: Voice session lifecycle manager.
+
+    Returns:
+        The unfrozen ``RecipeNote`` as a JSON dict.
+
+    Raises:
+        HTTPException: 404 when ``session_id`` does not exist.
+    """
+    try:
+        recipe_note = await voice_manager.unfreeze_session(session_id=session_id)
+    except SessionNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Voice session not found: {session_id}",
+        ) from exc
+    lg.info(f"Unfrozen voice session {session_id!r}")
+    return _note_to_detail(recipe_note)
+
+
+@router.delete("/{session_id}", summary="Delete a voice session")
+async def delete_voice_session(
+    session_id: str,
+    _session: Annotated[SessionData, Depends(get_current_user)],
+    voice_manager: Annotated[VoiceSessionManager, Depends(get_voice_manager)],
+) -> dict:  # type: ignore[type-arg]
+    """Permanently remove a voice session and its files.
+
+    Args:
+        session_id: Target voice session identifier.
+        _session: Authenticated user session.
+        voice_manager: Voice session lifecycle manager.
+
+    Returns:
+        Confirmation message.
+
+    Raises:
+        HTTPException: 404 when ``session_id`` does not exist.
+    """
+    try:
+        voice_manager.delete_session(session_id=session_id)
+    except SessionNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Voice session not found: {session_id}",
+        ) from exc
+    return {"detail": f"Session {session_id} deleted"}

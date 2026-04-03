@@ -1,0 +1,46 @@
+{% for recipe in recipes %}
+<tr id="cook-row-{{ recipe.id }}" data-recipe-id="{{ recipe.id }}">
+  <td class="has-text-centered has-text-grey">{{ recipe.sort_index }}</td>
+  <td>
+    <a href="/recipes/{{ recipe.id }}" class="has-text-weight-semibold">
+      {{ recipe.name }}
+    </a>
+    {% if recipe.meal_course %}
+    <span class="tag is-primary is-light is-small ml-2">{{ recipe.meal_course }}</span>
+    {% endif %}
+  </td>
+  <td class="has-text-centered">
+    {% if recipe.source == "instagram" %}
+    <span class="tag is-info is-light">IG</span>
+    {% elif recipe.source == "voice_note" %}
+    <span class="tag is-warning is-light">Voice</span>
+    {% else %}
+    <span class="tag is-light">Manual</span>
+    {% endif %}
+  </td>
+  <td class="has-text-right pr-4">
+    <div class="buttons is-right">
+      {% if not loop.first %}
+      <button class="button is-small is-light"
+              title="Move up"
+              data-direction="-1">
+        ▲
+      </button>
+      {% endif %}
+      {% if not loop.last %}
+      <button class="button is-small is-light"
+              title="Move down"
+              data-direction="1">
+        ▼
+      </button>
+      {% endif %}
+    </div>
+  </td>
+</tr>
+{% else %}
+<tr>
+  <td colspan="4" class="has-text-centered has-text-grey py-5">
+    No matching recipes.
+  </td>
+</tr>
+{% endfor %}

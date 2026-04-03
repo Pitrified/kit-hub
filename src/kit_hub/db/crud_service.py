@@ -28,6 +28,7 @@ from kit_hub.db.models import RecipeRow
 from kit_hub.db.models import RecipeTagRow
 from kit_hub.db.models import TagRow
 from kit_hub.recipes.recipe_core import RecipeCore
+from kit_hub.recipes.recipe_enums import MealCourse
 from kit_hub.recipes.recipe_enums import RecipeSource
 from kit_hub.recipes.tag import RecipeTagAssignment
 
@@ -51,6 +52,8 @@ class RecipeCRUDService:
         source: RecipeSource,
         source_id: str = "",
         user_id: str | None = None,
+        original_url: str | None = None,
+        raw_input_text: str | None = None,
     ) -> RecipeRow:
         """Persist a new recipe and return the resulting row.
 
@@ -64,6 +67,8 @@ class RecipeCRUDService:
             source_id: Platform-specific identifier (IG shortcode, etc.).
                 Empty string for manual entries.
             user_id: Owner identifier.  ``None`` for anonymous recipes.
+            original_url: Full source URL (e.g. the Instagram post URL).
+            raw_input_text: The exact text fed to the LLM transcriber.
 
         Returns:
             RecipeRow: The newly created ORM row with all columns populated.
@@ -77,6 +82,8 @@ class RecipeCRUDService:
             name=recipe.name,
             source=source.value,
             source_id=source_id,
+            original_url=original_url,
+            raw_input_text=raw_input_text,
             meal_course=recipe.meal_course.value if recipe.meal_course else None,
             recipe_json=recipe.model_dump_json(),
             user_id=user_id,
@@ -143,6 +150,11 @@ class RecipeCRUDService:
         user_id: str | None = None,
         limit: int = 50,
         offset: int = 0,
+        source: RecipeSource | None = None,
+        meal_course: MealCourse | None = None,
+        created_after: datetime | None = None,
+        created_before: datetime | None = None,
+        search: str | None = None,
     ) -> list[RecipeRow]:
         """Return a paginated list of recipes ordered by ``sort_index``.
 
@@ -152,6 +164,11 @@ class RecipeCRUDService:
                 When ``None``, return all recipes.
             limit: Maximum number of rows to return.
             offset: Number of rows to skip (for pagination).
+            source: Filter by recipe origin channel.
+            meal_course: Filter by meal course category.
+            created_after: Only return recipes created on or after this time.
+            created_before: Only return recipes created on or before this time.
+            search: Case-insensitive substring match on recipe name.
 
         Returns:
             List of ``RecipeRow`` instances ordered by ``sort_index`` ascending.
@@ -165,6 +182,16 @@ class RecipeCRUDService:
         )
         if user_id is not None:
             stmt = stmt.where(RecipeRow.user_id == user_id)
+        if source is not None:
+            stmt = stmt.where(RecipeRow.source == source.value)
+        if meal_course is not None:
+            stmt = stmt.where(RecipeRow.meal_course == meal_course.value)
+        if created_after is not None:
+            stmt = stmt.where(RecipeRow.created_at >= created_after)
+        if created_before is not None:
+            stmt = stmt.where(RecipeRow.created_at <= created_before)
+        if search:
+            stmt = stmt.where(RecipeRow.name.ilike(f"%{search}%"))
         result = await session.execute(stmt)
         return list(result.scalars().all())
 

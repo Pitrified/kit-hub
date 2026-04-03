@@ -289,6 +289,66 @@ class VoiceSessionManager:
             return list(self._sessions)
         return [sid for sid, e in self._sessions.items() if e.user_id == user_id]
 
+    def list_frozen_sessions(
+        self,
+        user_id: str | None = None,
+    ) -> list[tuple[str, RecipeNote]]:
+        """List frozen sessions with their ``RecipeNote``, optionally by owner.
+
+        Args:
+            user_id: When provided, only sessions with a matching
+                ``user_id`` are returned.
+
+        Returns:
+            List of ``(session_id, RecipeNote)`` tuples for frozen sessions.
+        """
+        results: list[tuple[str, RecipeNote]] = []
+        for sid, entry in self._sessions.items():
+            if not entry.frozen:
+                continue
+            if user_id is not None and entry.user_id != user_id:
+                continue
+            results.append((sid, entry.note))
+        return results
+
+    async def unfreeze_session(self, session_id: str) -> RecipeNote:
+        """Re-open a frozen session so more audio clips can be appended.
+
+        Args:
+            session_id: ID of the session to unfreeze.
+
+        Returns:
+            The unfrozen ``RecipeNote``.
+
+        Raises:
+            SessionNotFoundError: If ``session_id`` does not exist.
+        """
+        entry = self._sessions.get(session_id)
+        if entry is None:
+            raise SessionNotFoundError(session_id)
+        entry.frozen = False
+        lg.info(f"Unfrozen voice session {session_id!r}")
+        return entry.note
+
+    def delete_session(self, session_id: str) -> None:
+        """Remove a session from memory and delete its files from disk.
+
+        Args:
+            session_id: ID of the session to delete.
+
+        Raises:
+            SessionNotFoundError: If ``session_id`` does not exist.
+        """
+        entry = self._sessions.pop(session_id, None)
+        if entry is None:
+            raise SessionNotFoundError(session_id)
+        session_dir = self._notes_dir / session_id
+        if session_dir.exists():
+            import shutil  # noqa: PLC0415
+
+            shutil.rmtree(session_dir)
+        lg.info(f"Deleted voice session {session_id!r}")
+
     def _persist(self, session_id: str, note: RecipeNote) -> None:
         """Write the session's ``RecipeNote`` to ``note.json``.
 

@@ -54,7 +54,65 @@
       <div id="add-recipe-body" class="mt-3"></div>
     </div>
 
+    {# ── Filter bar ──────────────────────────────────────────── #}
+    <div class="box mb-5" id="filter-bar">
+      <form method="get" action="/recipes" class="field is-grouped is-grouped-multiline">
+        <div class="control">
+          <input class="input" type="text" name="search"
+                 placeholder="Search recipes..."
+                 value="{{ search }}"
+                 hx-get="/pages/partials/recipe-grid"
+                 hx-trigger="keyup changed delay:300ms"
+                 hx-target="#recipe-grid-wrapper"
+                 hx-swap="innerHTML"
+                 hx-include="#filter-bar"
+                 hx-push-url="false">
+        </div>
+        <div class="control">
+          <div class="select">
+            <select name="source"
+                    hx-get="/pages/partials/recipe-grid"
+                    hx-trigger="change"
+                    hx-target="#recipe-grid-wrapper"
+                    hx-swap="innerHTML"
+                    hx-include="#filter-bar"
+                    hx-push-url="false">
+              <option value="">All sources</option>
+              {% for s in sources %}
+              <option value="{{ s }}" {% if source == s %}selected{% endif %}>{{ s | replace("_", " ") | title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="control">
+          <div class="select">
+            <select name="meal_course"
+                    hx-get="/pages/partials/recipe-grid"
+                    hx-trigger="change"
+                    hx-target="#recipe-grid-wrapper"
+                    hx-swap="innerHTML"
+                    hx-include="#filter-bar"
+                    hx-push-url="false">
+              <option value="">All courses</option>
+              {% for m in meal_courses %}
+              <option value="{{ m }}" {% if meal_course == m %}selected{% endif %}>{{ m | title }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <div class="control">
+          <button class="button is-light" type="submit">Apply</button>
+        </div>
+        {% if search or source or meal_course %}
+        <div class="control">
+          <a href="/recipes" class="button is-ghost is-small has-text-grey">Clear filters</a>
+        </div>
+        {% endif %}
+      </form>
+    </div>
+
     {# ── Recipe card grid ────────────────────────────────────── #}
+    <div id="recipe-grid-wrapper">
     {% if recipes %}
     <div class="columns is-multiline" id="recipe-grid">
       {% for recipe in recipes %}
@@ -80,7 +138,7 @@
             <a href="/recipes/{{ recipe.id }}" class="card-footer-item">
               View
             </a>
-            <button class="card-footer-item button is-ghost is-small has-text-danger"
+            <button class="card-footer-item has-text-danger"
                     hx-delete="/api/v1/recipes/{{ recipe.id }}"
                     hx-confirm="Delete '{{ recipe.name }}'? This cannot be undone."
                     hx-target="#recipe-card-{{ recipe.id }}"
@@ -97,14 +155,14 @@
     {% if has_prev or has_next %}
     <nav class="pagination is-centered mt-4" aria-label="Recipe pages">
       {% if has_prev %}
-      <a href="/recipes?page={{ page - 1 }}&page_size={{ page_size }}"
+      <a href="/recipes?page={{ page - 1 }}&page_size={{ page_size }}&source={{ source }}&meal_course={{ meal_course }}&search={{ search }}"
          class="pagination-previous">Previous</a>
       {% else %}
       <a class="pagination-previous" disabled>Previous</a>
       {% endif %}
 
       {% if has_next %}
-      <a href="/recipes?page={{ page + 1 }}&page_size={{ page_size }}"
+      <a href="/recipes?page={{ page + 1 }}&page_size={{ page_size }}&source={{ source }}&meal_course={{ meal_course }}&search={{ search }}"
          class="pagination-next">Next</a>
       {% else %}
       <a class="pagination-next" disabled>Next</a>
@@ -121,6 +179,7 @@
       </p>
     </div>
     {% endif %}
+    </div>{# /recipe-grid-wrapper #}
 
   </div>
 </section>
