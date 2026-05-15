@@ -217,7 +217,7 @@ async def create_recipe(
 
 @router.post(
     "/ingest",
-    summary="Ingest recipe from Instagram URL",
+    summary="Ingest recipe from URL",
     status_code=status.HTTP_201_CREATED,
     response_model=None,
 )
@@ -228,30 +228,33 @@ async def ingest_recipe(
     db: Annotated[DatabaseSession, Depends(get_db)],
     ingest: Annotated[IngestService, Depends(get_ingest_service)],
 ) -> RecipeDetailResponse | Response:
-    """Download an Instagram post, parse it with the LLM, and persist the recipe.
+    """Download a URL, parse it with the LLM, and persist the recipe.
+
+    Supports Instagram posts, known recipe websites, and arbitrary web
+    pages. The download pipeline auto-detects the source type and uses
+    the appropriate scraper.
 
     When the request originates from HTMX, returns an ``HX-Redirect``
     response pointing to the new recipe's detail page instead of JSON.
 
     Args:
         request: Incoming request (used to detect HTMX).
-        body: Instagram post URL.
+        body: URL to ingest.
         session: Authenticated user session.
         db: Database session manager.
-        ingest: Instagram ingestion pipeline.
+        ingest: URL ingestion pipeline.
 
     Returns:
         Full detail for the ingested recipe, or an HX-Redirect
         response for HTMX callers.
 
     Raises:
-        HTTPException: 422 when the post has no usable text (no caption or
-            transcript).
+        HTTPException: 422 when the page has no usable text.
         HTTPException: 500 when the row cannot be retrieved after ingestion.
     """
-    lg.info(f"Ingesting IG URL: {body.url}")
+    lg.info(f"Ingesting URL: {body.url}")
     try:
-        await ingest.ingest_ig_url(url=body.url, user_id=session.user_id)
+        await ingest.ingest_url(url=body.url, user_id=session.user_id)
     except EmptyMediaTextError as exc:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,

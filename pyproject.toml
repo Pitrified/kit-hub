@@ -10,7 +10,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "llm-core[all] @ git+https://github.com/Pitrified/llm-core@v0.2.2",
     "loguru>=0.7.3",
-    "media-downloader[instagram] @ git+https://github.com/Pitrified/media-downloader@v0.1.2",
+    "media-downloader[instagram,web] @ git+https://github.com/Pitrified/media-downloader@v0.1.2",
     "sqlalchemy>=2.0.0",
 ]
 

@@ -22,10 +22,13 @@ class RecipeCreateRequest(BaseModel):
 
 
 class RecipeIngestRequest(BaseModel):
-    """Request body for ingesting a recipe from an Instagram URL.
+    """Request body for ingesting a recipe from a URL.
+
+    Supports Instagram posts, known recipe websites, and arbitrary
+    web pages. The download pipeline auto-detects the source type.
 
     Attributes:
-        url: Public Instagram post URL.
+        url: Public URL to ingest (Instagram, recipe site, or web page).
     """
 
     url: str

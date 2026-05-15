@@ -30,11 +30,15 @@ class RecipeSource(StrEnum):
 
     Attributes:
         INSTAGRAM: Downloaded from an Instagram post.
+        WEB_RECIPE: Scraped from a known recipe website.
+        WEB_GENERIC: Scraped from a generic web page.
         VOICE_NOTE: Transcribed from a live voice session.
         MANUAL: Entered by the user directly.
     """
 
     INSTAGRAM = "instagram"
+    WEB_RECIPE = "web_recipe"
+    WEB_GENERIC = "web_generic"
     VOICE_NOTE = "voice_note"
     MANUAL = "manual"
 

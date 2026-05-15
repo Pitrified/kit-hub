@@ -228,7 +228,7 @@ def test_ingest_recipe_returns_201(
 ) -> None:
     """POST /api/v1/recipes/ingest returns 201 on success."""
     row = _make_recipe_row(name="Insta Pasta")
-    recipe_app.state.ingest_service.ingest_ig_url = AsyncMock(return_value=None)
+    recipe_app.state.ingest_service.ingest_url = AsyncMock(return_value=None)
 
     # Patch _fetch_latest_row to return our mock row
     with patch(
@@ -249,7 +249,7 @@ def test_ingest_recipe_empty_media_returns_422(
 ) -> None:
     """POST /api/v1/recipes/ingest returns 422 when post has no text."""
     url = "https://www.instagram.com/p/empty/"
-    recipe_app.state.ingest_service.ingest_ig_url = AsyncMock(
+    recipe_app.state.ingest_service.ingest_url = AsyncMock(
         side_effect=EmptyMediaTextError(url)
     )
 

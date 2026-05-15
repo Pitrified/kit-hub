@@ -1172,7 +1172,7 @@ requires-dist = [
     { name = "fastapi-tools", marker = "extra == 'webapp'", git = "https://github.com/Pitrified/fastapi-tools?rev=v0.1.0" },
     { name = "llm-core", extras = ["all"], git = "https://github.com/Pitrified/llm-core?rev=v0.2.2" },
     { name = "loguru", specifier = ">=0.7.3" },
-    { name = "media-downloader", extras = ["instagram"], git = "https://github.com/Pitrified/media-downloader?rev=v0.1.2" },
+    { name = "media-downloader", extras = ["instagram", "web"], git = "https://github.com/Pitrified/media-downloader?rev=v0.1.2" },
     { name = "sqlalchemy", specifier = ">=2.0.0" },
 ]
 provides-extras = ["webapp"]

@@ -4,7 +4,7 @@
 sources. It wires together the download router, LLM transcriber, and CRUD
 service into a single async pipeline.
 
-Pipeline for Instagram URLs::
+Pipeline for any URL::
 
     URL -> DownloadRouter.adownload() -> DownloadedMedia
         -> combine caption + transcript
@@ -21,6 +21,7 @@ Pipeline for plain text::
 
 from loguru import logger as lg
 from media_downloader.core.models import DownloadedMedia
+from media_downloader.core.models import SourceType
 from media_downloader.core.router import DownloadRouter
 
 from kit_hub.db.crud_service import RecipeCRUDService
@@ -28,6 +29,13 @@ from kit_hub.db.session import DatabaseSession
 from kit_hub.llm.transcriber import RecipeCoreTranscriber
 from kit_hub.recipes.recipe_core import RecipeCore
 from kit_hub.recipes.recipe_enums import RecipeSource
+
+_SOURCE_MAP: dict[SourceType, RecipeSource] = {
+    SourceType.INSTAGRAM: RecipeSource.INSTAGRAM,
+    SourceType.WEB_RECIPE: RecipeSource.WEB_RECIPE,
+    SourceType.GENERIC_WEB: RecipeSource.WEB_GENERIC,
+}
+"""Maps ``media-downloader`` source types to kit-hub recipe sources."""
 
 
 class EmptyMediaTextError(ValueError):
@@ -41,6 +49,20 @@ class EmptyMediaTextError(ValueError):
         """
         self.url = url
         msg = f"No caption or transcript found for URL: {url}"
+        super().__init__(msg)
+
+
+class UnmappedSourceTypeError(ValueError):
+    """Raised when a media-downloader SourceType has no RecipeSource mapping."""
+
+    def __init__(self, source: SourceType) -> None:
+        """Initialise with the unmapped source type.
+
+        Args:
+            source: The ``SourceType`` that has no kit-hub mapping.
+        """
+        self.source = source
+        msg = f"No RecipeSource mapping for SourceType: {source.value}"
         super().__init__(msg)
 
 
@@ -90,6 +112,8 @@ class IngestService:
     ) -> RecipeCore:
         """Download an Instagram post, parse it, and persist the recipe.
 
+        Thin wrapper around ``ingest_url`` for backwards compatibility.
+
         Args:
             url: Public Instagram post URL.
             user_id: Optional owner identifier for the resulting recipe.
@@ -101,17 +125,43 @@ class IngestService:
             EmptyMediaTextError: If the downloaded post has neither a
                 caption nor a transcription to parse.
         """
-        lg.info(f"Ingesting IG URL: {url}")
+        return await self.ingest_url(url=url, user_id=user_id)
+
+    async def ingest_url(
+        self,
+        url: str,
+        user_id: str | None = None,
+    ) -> RecipeCore:
+        """Download any supported URL, parse it, and persist the recipe.
+
+        The ``DownloadRouter`` classifies the URL and dispatches to the
+        appropriate provider (Instagram, known recipe site, or generic
+        web page). The extracted text is then parsed by the LLM transcriber.
+
+        Args:
+            url: Any supported URL (Instagram, recipe site, or web page).
+            user_id: Optional owner identifier for the resulting recipe.
+
+        Returns:
+            The parsed and persisted ``RecipeCore``.
+
+        Raises:
+            EmptyMediaTextError: If the downloaded content has no usable text.
+            UnmappedSourceTypeError: If the detected source type has no
+                kit-hub ``RecipeSource`` mapping.
+        """
+        lg.info(f"Ingesting URL: {url}")
         media = await self._dl_router.adownload(url)
         text = self._build_text(media)
         if not text:
             raise EmptyMediaTextError(url)
+        source = self._map_source(media.source)
         recipe = await self._transcriber.ainvoke(text)
         async with self._db.get_session() as session:
             await self._crud.create_recipe(
                 session,
                 recipe,
-                source=RecipeSource.INSTAGRAM,
+                source=source,
                 source_id=media.source_id,
                 user_id=user_id,
                 original_url=url,
@@ -167,3 +217,21 @@ class IngestService:
         if media.transcript:
             parts.append(media.transcript)
         return "\n\n".join(parts)
+
+    @staticmethod
+    def _map_source(source: SourceType) -> RecipeSource:
+        """Map a media-downloader ``SourceType`` to a kit-hub ``RecipeSource``.
+
+        Args:
+            source: The detected source type from media-downloader.
+
+        Returns:
+            Corresponding ``RecipeSource`` enum value.
+
+        Raises:
+            UnmappedSourceTypeError: If the source type has no mapping.
+        """
+        recipe_source = _SOURCE_MAP.get(source)
+        if recipe_source is None:
+            raise UnmappedSourceTypeError(source)
+        return recipe_source
